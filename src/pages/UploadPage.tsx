@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { CloudUpload, X, Image as ImageIcon } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { Project } from "../lib/types";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 
 export default function UploadPage() {
@@ -15,7 +15,7 @@ export default function UploadPage() {
   const [status, setStatus] = useState<string>("");
   const [mangaName, setMangaName] = useState(manga || "");
   const [chapterName, setChapterName] = useState("");
-  const dropRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -26,9 +26,7 @@ export default function UploadPage() {
   }, []);
 
   useEffect(() => {
-    if (manga) {
-      setMangaName(manga);
-    }
+    if (manga) setMangaName(manga);
   }, [manga]);
 
   const existing = projects.find((p) => p.name === mangaName.trim());
@@ -37,11 +35,13 @@ export default function UploadPage() {
     if (!files) return;
     const images: File[] = [];
     for (const f of Array.from(files)) {
-      if (f.type.startsWith("image/")) {
-        images.push(f);
-      }
+      if (f.type.startsWith("image/")) images.push(f);
     }
     setSelectedFiles((prev) => [...prev, ...images]);
+  }
+
+  function removeFile(index: number) {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function handleUpload() {
@@ -58,9 +58,7 @@ export default function UploadPage() {
       const result = await api.uploadFiles(mangaName.trim(), chapterName.trim(), selectedFiles);
       setStatus(`${result.saved} rasm yuklandi!`);
       setSelectedFiles([]);
-      setTimeout(() => {
-        navigate(`/project/${result.manga}`);
-      }, 700);
+      setTimeout(() => navigate(`/project/${result.manga}`), 700);
     } catch (e) {
       const err = e as Error;
       setStatus(`Xatolik: ${err.message}`);
@@ -68,102 +66,123 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Rasm yuklash</h1>
-        <p className="mt-2 text-muted-foreground">
+    <div className="animate-fade-in">
+      <div className="page-header">
+        <h1 className="page-title">Rasm yuklash</h1>
+        <p className="page-description">
           Yangi manga yoki mavjudiga yangi chapter qo'shish.
         </p>
       </div>
 
-      <Card className="max-w-2xl">
-        <CardContent className="space-y-4 p-6">
-          <div className="space-y-2">
-            <label className="label">Manga nomi</label>
-            <Input
-              value={mangaName}
-              onChange={(e) => setMangaName(e.target.value)}
-              placeholder="masalan: one-piece"
-              list="manga-suggestions"
-            />
-            <datalist id="manga-suggestions">
-              {projects.map((p) => (
-                <option key={p.name} value={p.name} />
-              ))}
-            </datalist>
-            {mangaName ? (
-              <div className="text-xs text-muted-foreground">
-                {existing ? (
-                  <span> Mavjud manga — {existing.chapter_count} chapter bor. Yangi chapter qo'shiladi.</span>
-                ) : (
-                  <span> Yangi manga yaratiladi</span>
-                )}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <label className="label">Chapter nomi</label>
-            <Input
-              value={chapterName}
-              onChange={(e) => setChapterName(e.target.value)}
-              placeholder="masalan: 001"
-            />
-          </div>
-
-          <div
-            ref={dropRef}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-white/70 p-8 text-center transition hover:border-primary"
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault();
-            }}
-            onDrop={(e) => {
-              e.preventDefault();
-              onFiles(e.dataTransfer.files);
-            }}
-          >
-            <div className="text-xl">📁</div>
-            <p className="mt-2 text-sm font-medium">Rasmlarni bu yerga tashlang yoki bosing</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              PNG, JPG, JPEG, WebP, BMP (max 50MB, 200 ta gacha)
+      <div className="mx-auto max-w-2xl space-y-6">
+        {/* Manga name */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Manga nomi</label>
+          <Input
+            value={mangaName}
+            onChange={(e) => setMangaName(e.target.value)}
+            placeholder="masalan: one-piece"
+            list="manga-suggestions"
+          />
+          <datalist id="manga-suggestions">
+            {projects.map((p) => (
+              <option key={p.name} value={p.name} />
+            ))}
+          </datalist>
+          {mangaName.trim() && (
+            <p className="text-xs text-muted-foreground">
+              {existing
+                ? `Mavjud manga — ${existing.chapter_count} chapter bor. Yangi chapter qo'shiladi.`
+                : "Yangi manga yaratiladi"}
             </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => onFiles(e.target.files)}
-            />
-          </div>
+          )}
+        </div>
 
-          {selectedFiles.length > 0 ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>{selectedFiles.length} ta fayl tanlandi</span>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedFiles([])}>
-                  Tozalash
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                {selectedFiles.map((f) => (
-                  <span key={f.name} className="rounded-full border bg-white px-3 py-1">
-                    {f.name}
-                  </span>
-                ))}
-              </div>
+        {/* Chapter name */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Chapter nomi</label>
+          <Input
+            value={chapterName}
+            onChange={(e) => setChapterName(e.target.value)}
+            placeholder="masalan: 001"
+          />
+        </div>
+
+        {/* Drop zone */}
+        <div
+          className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-10 text-center transition-colors ${
+            dragging
+              ? "border-primary bg-primary/5"
+              : "border-border bg-card hover:border-primary/50"
+          }`}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            onFiles(e.dataTransfer.files);
+          }}
+        >
+          <CloudUpload className="mb-3 h-10 w-10 text-muted-foreground/50" />
+          <p className="text-sm font-medium">Rasmlarni bu yerga tashlang yoki bosing</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            PNG, JPG, JPEG, WebP, BMP (max 50MB, 200 ta gacha)
+          </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => onFiles(e.target.files)}
+          />
+        </div>
+
+        {/* File list */}
+        {selectedFiles.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">{selectedFiles.length} ta fayl tanlandi</span>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedFiles([])}>
+                Hammasini tozalash
+              </Button>
             </div>
-          ) : null}
-
-          <div className="flex items-center gap-3">
-            <Button onClick={handleUpload} disabled={selectedFiles.length === 0}>
-              Yuklash
-            </Button>
-            {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {selectedFiles.map((f, i) => (
+                <div
+                  key={`${f.name}-${i}`}
+                  className="group flex items-center gap-2 rounded-lg border bg-card px-3 py-2"
+                >
+                  <ImageIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 truncate text-xs">{f.name}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFile(i);
+                    }}
+                    className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        )}
+
+        {/* Upload button */}
+        <div className="flex items-center gap-3">
+          <Button onClick={handleUpload} disabled={selectedFiles.length === 0} className="gap-2">
+            <CloudUpload className="h-4 w-4" />
+            Yuklash
+          </Button>
+          {status && <span className="text-sm text-muted-foreground">{status}</span>}
+        </div>
+      </div>
     </div>
   );
 }

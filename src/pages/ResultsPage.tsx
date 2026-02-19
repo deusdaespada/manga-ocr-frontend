@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  X,
+  Languages,
+  BookOpen,
+  Save,
+} from "lucide-react";
 
 import { api } from "../lib/api";
 import type { Page, Region, ResultsData } from "../lib/types";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = text.split(/\s+/);
@@ -85,16 +95,22 @@ function collectTexts(pages: Page[]) {
   pages.forEach((page, pageIdx) => {
     (page.regions || []).forEach((r, regionIdx) => {
       if (r.original_text && r.original_text.trim()) {
-        texts.push({
-          pageIdx,
-          regionIdx,
-          original_text: r.original_text,
-          uz_text: r.uz_text || "",
-        });
+        texts.push({ pageIdx, regionIdx, original_text: r.original_text, uz_text: r.uz_text || "" });
       }
     });
   });
   return texts;
+}
+
+function formatCost(data: ResultsData): string | null {
+  const parts: string[] = [];
+  if (data.ocr_usage?.estimated_cost_usd) {
+    parts.push(`OCR $${data.ocr_usage.estimated_cost_usd.toFixed(4)}`);
+  }
+  if (data.translator_usage?.estimated_cost_usd) {
+    parts.push(`Tarjima $${data.translator_usage.estimated_cost_usd.toFixed(4)}`);
+  }
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 export default function ResultsPage() {
@@ -108,6 +124,8 @@ export default function ResultsPage() {
     Record<string, { original: string; translation: string; status?: string }>
   >({});
   const [translating, setTranslating] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [confirmTranslate, setConfirmTranslate] = useState(false);
 
   const originalImgRef = useRef<HTMLImageElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -117,6 +135,7 @@ export default function ResultsPage() {
   const originalWrapRef = useRef<HTMLDivElement | null>(null);
   const cleanWrapRef = useRef<HTMLDivElement | null>(null);
   const syncingRef = useRef<"original" | "clean" | null>(null);
+  const syncTimeoutRef = useRef<number>(0);
   const readingCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
 
   useEffect(() => {
@@ -138,15 +157,13 @@ export default function ResultsPage() {
         }
         setRegionDrafts(drafts);
       })
-      .catch((err) => {
-        setStatus(`Xatolik: ${err.message}`);
-      });
+      .catch((err) => setStatus(`Xatolik: ${err.message}`));
   }, [manga, chapter]);
 
   const pages = data?.pages || [];
   const totalPages = pages.length + 1;
-
   const texts = useMemo(() => collectTexts(pages), [pages]);
+  const costText = data ? formatCost(data) : null;
 
   const renderBboxes = useCallback(
     (img: HTMLImageElement, canvas: HTMLCanvasElement, regions: Region[]) => {
@@ -156,10 +173,9 @@ export default function ResultsPage() {
       canvas.height = img.naturalHeight;
       canvas.style.width = `${img.clientWidth}px`;
       canvas.style.height = `${img.clientHeight}px`;
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       regions.forEach((r) => {
-        ctx.strokeStyle = "rgba(34, 197, 94, 0.9)";
+        ctx.strokeStyle = "rgba(62, 207, 142, 0.7)";
         ctx.lineWidth = 3;
         ctx.strokeRect(r.bbox.x, r.bbox.y, r.bbox.w, r.bbox.h);
       });
@@ -175,7 +191,6 @@ export default function ResultsPage() {
       canvas.height = img.naturalHeight;
       canvas.style.width = `${img.clientWidth}px`;
       canvas.style.height = `${img.clientHeight}px`;
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawTranslatedTexts(ctx, regions);
     },
@@ -186,7 +201,6 @@ export default function ResultsPage() {
     if (!data) return;
     const page = pages[currentPage];
     if (!page) return;
-
     const img = originalImgRef.current;
     const canvas = originalCanvasRef.current;
     if (img && canvas) {
@@ -194,7 +208,6 @@ export default function ResultsPage() {
       if (img.complete && img.naturalWidth > 0) handler();
       else img.onload = handler;
     }
-
     const cleanImg = cleanImgRef.current;
     const cleanCanvas = cleanCanvasRef.current;
     if (cleanImg && cleanCanvas) {
@@ -217,6 +230,7 @@ export default function ResultsPage() {
       });
     }
     setRegionDrafts(drafts);
+    setConfirmingDelete(null);
   }, [data, currentPage]);
 
   useEffect(() => {
@@ -224,16 +238,13 @@ export default function ResultsPage() {
     const cleanImg = cleanImgRef.current;
     const drawCanvas = drawCanvasRef.current;
     if (!cleanImg || !drawCanvas) return;
-
     const canvas = drawCanvas;
     canvas.width = cleanImg.naturalWidth;
     canvas.height = cleanImg.naturalHeight;
     canvas.style.width = `${cleanImg.clientWidth}px`;
     canvas.style.height = `${cleanImg.clientHeight}px`;
-
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     let startX = 0;
     let startY = 0;
     let isDrawing = false;
@@ -242,10 +253,7 @@ export default function ResultsPage() {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
-      return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY,
-      };
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
     }
 
     function onDown(e: MouseEvent) {
@@ -266,11 +274,11 @@ export default function ResultsPage() {
       const y = Math.min(startY, coords.y);
       const w = Math.abs(coords.x - startX);
       const h = Math.abs(coords.y - startY);
-      drawCtx.strokeStyle = "rgba(52, 211, 153, 0.9)";
+      drawCtx.strokeStyle = "rgba(62, 207, 142, 0.8)";
       drawCtx.lineWidth = 3;
       drawCtx.setLineDash([8, 4]);
       drawCtx.strokeRect(x, y, w, h);
-      drawCtx.fillStyle = "rgba(52, 211, 153, 0.15)";
+      drawCtx.fillStyle = "rgba(62, 207, 142, 0.1)";
       drawCtx.fillRect(x, y, w, h);
       drawCtx.setLineDash([]);
     }
@@ -284,14 +292,10 @@ export default function ResultsPage() {
       const w = Math.round(Math.abs(coords.x - startX));
       const h = Math.round(Math.abs(coords.y - startY));
       const drawCtx = canvas.getContext("2d");
-      if (drawCtx) {
-        drawCtx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-
+      if (drawCtx) drawCtx.clearRect(0, 0, canvas.width, canvas.height);
       if (w < 10 || h < 10) return;
       if (!manga || !chapter) return;
-      const pageIdx = currentPage;
-      await api.addRegion(manga, chapter, pageIdx, {
+      await api.addRegion(manga, chapter, currentPage, {
         bbox: { x, y, w, h },
         original_text: "",
         uz_text: "",
@@ -309,7 +313,6 @@ export default function ResultsPage() {
     canvas.addEventListener("mousemove", onMove);
     canvas.addEventListener("mouseup", onUp);
     document.addEventListener("keydown", onKey);
-
     return () => {
       canvas.removeEventListener("mousedown", onDown);
       canvas.removeEventListener("mousemove", onMove);
@@ -318,6 +321,7 @@ export default function ResultsPage() {
     };
   }, [drawingMode, manga, chapter, currentPage]);
 
+  /* ── Scroll sync (percentage-based, robust) ── */
   useEffect(() => {
     const originalWrap = originalWrapRef.current;
     const cleanWrap = cleanWrapRef.current;
@@ -330,22 +334,34 @@ export default function ResultsPage() {
     ) => {
       if (syncingRef.current && syncingRef.current !== tag) return;
       syncingRef.current = tag;
-      target.scrollTop = source.scrollTop;
+
+      const sourceMax = source.scrollHeight - source.clientHeight;
+      const targetMax = target.scrollHeight - target.clientHeight;
+
+      if (sourceMax > 0 && targetMax > 0) {
+        const ratio = source.scrollTop / sourceMax;
+        target.scrollTop = Math.round(ratio * targetMax);
+      } else {
+        target.scrollTop = source.scrollTop;
+      }
       target.scrollLeft = source.scrollLeft;
-      requestAnimationFrame(() => {
+
+      clearTimeout(syncTimeoutRef.current);
+      syncTimeoutRef.current = window.setTimeout(() => {
         syncingRef.current = null;
-      });
+      }, 30);
     };
 
     const onOriginal = () => syncScroll(originalWrap, cleanWrap, "original");
     const onClean = () => syncScroll(cleanWrap, originalWrap, "clean");
 
-    originalWrap.addEventListener("scroll", onOriginal);
-    cleanWrap.addEventListener("scroll", onClean);
+    originalWrap.addEventListener("scroll", onOriginal, { passive: true });
+    cleanWrap.addEventListener("scroll", onClean, { passive: true });
 
     return () => {
       originalWrap.removeEventListener("scroll", onOriginal);
       cleanWrap.removeEventListener("scroll", onClean);
+      clearTimeout(syncTimeoutRef.current);
     };
   }, [currentPage]);
 
@@ -394,47 +410,43 @@ export default function ResultsPage() {
   }, [readingOpen, pages]);
 
   if (!data) {
-    return <div className="text-muted-foreground">{status}</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{status}</div>;
   }
 
   if (pages.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-10 text-center text-muted-foreground">
-          Natijalar topilmadi
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card py-16 text-center">
+        <p className="text-sm text-muted-foreground">Natijalar topilmadi</p>
+      </div>
     );
   }
 
+  /* Translation text view (last virtual page) */
   if (currentPage === pages.length) {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-semibold">Tarjima matnlari</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setCurrentPage(pages.length - 1)}>
-              Orqaga
-            </Button>
-          </div>
+      <div className="animate-fade-in space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium">Tarjima matnlari</span>
+          <Button variant="outline" size="sm" onClick={() => setCurrentPage(pages.length - 1)} className="gap-1.5">
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Orqaga
+          </Button>
         </div>
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            {texts.length === 0 ? (
-              <div className="text-muted-foreground">Matn topilmadi.</div>
-            ) : (
-              texts.map((t, idx) => (
-                <div key={`${t.pageIdx}-${t.regionIdx}-${idx}`} className="rounded-lg border bg-white/70 p-3">
-                  <div className="text-xs text-muted-foreground">Sahifa {t.pageIdx + 1}</div>
-                  <div className="mt-1 text-sm font-medium">{t.original_text}</div>
-                  <div className="mt-2 text-sm text-muted-foreground">
-                    {t.uz_text ? t.uz_text.toUpperCase() : "— Tarjima yo'q"}
-                  </div>
+        <div className="space-y-2">
+          {texts.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Matn topilmadi.</div>
+          ) : (
+            texts.map((t, idx) => (
+              <div key={`${t.pageIdx}-${t.regionIdx}-${idx}`} className="rounded-lg border bg-card p-3">
+                <div className="text-[11px] text-muted-foreground">Sahifa {t.pageIdx + 1}</div>
+                <div className="mt-1 text-sm">{t.original_text}</div>
+                <div className="mt-1.5 text-sm text-muted-foreground">
+                  {t.uz_text ? t.uz_text.toUpperCase() : "— Tarjima yo'q"}
                 </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     );
   }
@@ -443,252 +455,304 @@ export default function ResultsPage() {
   const regions = page.regions || [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-sm text-muted-foreground">
-            <Link to="/">Dashboard</Link> / <Link to={`/project/${manga}`}>{manga}</Link> / {chapter}
-          </div>
-          <h1 className="text-3xl font-semibold">Natijalar</h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to={`/edit/${manga}/${chapter}`}>
-            <Button variant="outline">Tahrirlash</Button>
-          </Link>
-          <Link to={`/project/${manga}`}>
-            <Button variant="outline">Ortga</Button>
-          </Link>
-        </div>
-      </div>
+    <div className="animate-fade-in flex h-[calc(100vh-48px)] flex-col gap-3">
+      {/* Compact toolbar — all actions in one row */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Back */}
+        <Link
+          to={`/project/${manga}`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span>{manga}/{chapter}</span>
+        </Link>
 
-      <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-sm text-muted-foreground">
-              Sahifa {currentPage + 1} / {totalPages}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}>
-                Oldingi
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(pages.length, currentPage + 1))}
-              >
-                Keyingi
-              </Button>
-              <Button 
-                variant="default" 
-                size="sm" 
-                disabled={translating}
-                onClick={async () => {
-                  if (!manga || !chapter) return;
-                  if (!confirm("Barcha matnlarni tarjima qilmoqchimisiz?")) return;
-                  setTranslating(true);
-                  try {
-                    const res = await api.translateChapter({
-                      manga,
-                      chapter,
-                      backend: "openai",
-                    });
-                    if (res.job_id) {
-                      window.location.hash = `#/jobs/${res.job_id}`;
-                    } else {
-                      alert(res.message || "Tarjima tugadi");
-                      const updated = await api.getResults(manga, chapter);
-                      setData(updated);
-                    }
-                  } catch (e) {
-                    const err = e as Error;
-                    alert(`Xatolik: ${err.message}`);
-                  } finally {
-                    setTranslating(false);
+        <div className="h-4 w-px bg-border" />
+
+        {/* Pagination */}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+            disabled={currentPage === 0}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </Button>
+          <span className="min-w-[48px] text-center text-xs tabular-nums">
+            {currentPage + 1} / {totalPages}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 p-0"
+            onClick={() => setCurrentPage(Math.min(pages.length, currentPage + 1))}
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+
+        <div className="h-4 w-px bg-border" />
+
+        {/* Translate action */}
+        {confirmTranslate ? (
+          <div className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1">
+            <span className="text-[11px] text-muted-foreground">
+              {data?.translated ? "Qayta tarjima?" : "Tarjima?"}
+            </span>
+            <button
+              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/15"
+              onClick={async () => {
+                if (!manga || !chapter) return;
+                setConfirmTranslate(false);
+                setTranslating(true);
+                try {
+                  const res = await api.translateChapter({ manga, chapter, backend: "openai" });
+                  if (res.job_id) {
+                    window.location.hash = `#/jobs/${res.job_id}`;
+                  } else {
+                    const updated = await api.getResults(manga, chapter);
+                    setData(updated);
                   }
-                }}
-              >
-                {translating ? "Boshlanmoqda..." : "Tarjima qilish"}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setCurrentPage(pages.length)}>
-                Tarjimaga
-              </Button>
-              <Button size="sm" onClick={() => setReadingOpen(true)}>
-                To'liq o'qish
-              </Button>
-            </div>
+                } catch (e) {
+                  const err = e as Error;
+                  setRegionDrafts((prev) => ({ ...prev, __error: { original: "", translation: "", status: err.message } }));
+                } finally {
+                  setTranslating(false);
+                }
+              }}
+            >
+              Ha
+            </button>
+            <button
+              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent"
+              onClick={() => setConfirmTranslate(false)}
+            >
+              Yo'q
+            </button>
           </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1fr_1fr_340px]">
-            {/* Original image */}
-            <div className="space-y-2">
-              <div className="text-sm font-medium">Original</div>
-              <div
-                ref={originalWrapRef}
-                className="relative h-[75vh] overflow-auto rounded-lg border bg-white"
-              >
-                <img ref={originalImgRef} src={page.image_url} alt="Original" className="block w-full" />
-                <canvas ref={originalCanvasRef} className="pointer-events-none absolute inset-0" />
-              </div>
-            </div>
-
-            {/* Cleaned image */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-medium">Tarjima</div>
-                <Button
-                  variant={drawingMode ? "destructive" : "outline"}
-                  size="sm"
-                  onClick={() => setDrawingMode((prev) => !prev)}
-                >
-                  {drawingMode ? "Bekor" : "+ Region"}
-                </Button>
-              </div>
-              <div
-                ref={cleanWrapRef}
-                className="relative h-[75vh] overflow-auto rounded-lg border bg-white"
-              >
-                <img ref={cleanImgRef} src={page.cleaned_image_url} alt="Cleaned" className="block w-full" />
-                <canvas ref={cleanCanvasRef} className="pointer-events-none absolute inset-0" />
-                {drawingMode ? (
-                  <>
-                    <canvas ref={drawCanvasRef} className="absolute inset-0" />
-                    <div className="absolute bottom-3 left-3 rounded-md bg-white/90 px-3 py-1 text-xs">
-                      Matn joyini belgilang. Esc - bekor
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-
-            {/* Text regions panel */}
-            <div className="space-y-3 lg:max-h-[75vh] lg:overflow-y-auto">
-              <div className="text-sm font-medium">Matnlar ({regions.length})</div>
-              {regions.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Matn topilmadi
-                </div>
-              ) : (
-                regions.map((r, i) => {
-                  const key = `${currentPage}-${i}`;
-                  const draft = regionDrafts[key] || { original: "", translation: "" };
-                  return (
-                    <div key={`${currentPage}-${i}`} className="flex flex-col gap-2 rounded-lg border bg-white/70 p-3">
-                      <div className="text-sm font-semibold">
-                        {i + 1}. {r.original_text || ""}
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground">Original</div>
-                        <textarea
-                          className="min-h-[50px] w-full rounded border bg-white px-2 py-1 text-xs"
-                          value={draft.original}
-                          onChange={(e) =>
-                            setRegionDrafts((prev) => ({
-                              ...prev,
-                              [key]: { ...draft, original: e.target.value },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground">Tarjima</div>
-                        <textarea
-                          className="min-h-[50px] w-full rounded border bg-white px-2 py-1 text-xs"
-                          value={draft.translation}
-                          onChange={(e) =>
-                            setRegionDrafts((prev) => ({
-                              ...prev,
-                              [key]: { ...draft, translation: e.target.value },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        <Button
-                          size="sm"
-                          onClick={async () => {
-                            if (!manga || !chapter) return;
-                            setRegionDrafts((prev) => ({
-                              ...prev,
-                              [key]: { ...draft, status: "Saqlanmoqda..." },
-                            }));
-                            try {
-                              await api.updateRegion(manga, chapter, currentPage, i, {
-                                original_text: draft.original,
-                                uz_text: draft.translation,
-                              });
-                              setRegionDrafts((prev) => ({
-                                ...prev,
-                                [key]: { ...draft, status: "Saqlandi!" },
-                              }));
-                            } catch (e) {
-                              const err = e as Error;
-                              setRegionDrafts((prev) => ({
-                                ...prev,
-                                [key]: { ...draft, status: `Xatolik: ${err.message}` },
-                              }));
-                            }
-                          }}
-                        >
-                          Saqlash
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={async () => {
-                            if (!manga || !chapter) return;
-                            if (!confirm("O'chirmoqchimisiz?")) return;
-                            await api.deleteRegion(manga, chapter, currentPage, i);
-                            const updated = await api.getResults(manga, chapter);
-                            setData(updated);
-                          }}
-                        >
-                          O'chir
-                        </Button>
-                        {draft.status && <div className="text-xs text-muted-foreground">{draft.status}</div>}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {(data.ocr_usage || data.translator_usage) && (
-            <Card className="bg-white/70">
-              <CardContent className="space-y-2 p-4 text-sm">
-                <div className="font-semibold">API xarajatlar</div>
-                {data.ocr_usage && (
-                  <div className="text-muted-foreground">
-                    OCR ({data.ocr_usage.model || data.ocr_usage.ocr_backend}) — ${
-                      (data.ocr_usage.estimated_cost_usd || 0).toFixed(6)
-                    }
-                  </div>
-                )}
-                {data.translator_usage && (
-                  <div className="text-muted-foreground">
-                    Tarjima ({data.translator_usage.model || data.translator_usage.translator_backend}) — ${
-                      (data.translator_usage.estimated_cost_usd || 0).toFixed(6)
-                    }
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        ) : (
+          <Button
+            size="sm"
+            variant={data?.translated ? "outline" : "default"}
+            className={`h-7 gap-1 text-xs ${data?.translated ? "border-amber-500/40 text-amber-400 hover:bg-amber-500/10" : ""}`}
+            disabled={translating}
+            onClick={() => setConfirmTranslate(true)}
+          >
+            <Languages className="h-3 w-3" />
+            {translating ? "..." : data?.translated ? "Qayta tarjima" : "Tarjima"}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setCurrentPage(pages.length)}>
+          Matnlar
+        </Button>
+        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setReadingOpen(true)}>
+          <BookOpen className="h-3 w-3" />
+          O'qish
+        </Button>
+        <Link to={`/edit/${manga}/${chapter}`}>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
+            <Pencil className="h-3 w-3" />
+            Tahrir
+          </Button>
+        </Link>
+        <Button
+          variant={drawingMode ? "destructive" : "outline"}
+          size="sm"
+          className="h-7 gap-1 text-xs"
+          onClick={() => setDrawingMode((prev) => !prev)}
+        >
+          {drawingMode ? (
+            <><X className="h-3 w-3" />Bekor</>
+          ) : (
+            <><Plus className="h-3 w-3" />Region</>
           )}
+        </Button>
+
+        {/* Cost — right side */}
+        {costText && (
+          <>
+            <div className="flex-1" />
+            <span className="mono text-[11px] text-muted-foreground">{costText}</span>
+          </>
+        )}
       </div>
 
-      {readingOpen ? (
-        <div className="fixed inset-0 z-50 flex flex-col bg-white/95">
-          <div className="flex items-center justify-between border-b px-6 py-4">
-            <div className="text-lg font-semibold">To'liq o'qish</div>
-            <Button variant="outline" size="sm" onClick={() => setReadingOpen(false)}>
+      {/* Three-column layout — fills remaining height */}
+      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_1fr_280px]">
+        {/* Original image */}
+        <div className="flex min-h-0 flex-col gap-1">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Original</div>
+          <div
+            ref={originalWrapRef}
+            className="relative min-h-0 flex-1 overflow-auto rounded-lg border bg-card"
+          >
+            <img ref={originalImgRef} src={page.image_url} alt="Original" className="block w-full" />
+            <canvas ref={originalCanvasRef} className="pointer-events-none absolute inset-0" />
+          </div>
+        </div>
+
+        {/* Cleaned image */}
+        <div className="flex min-h-0 flex-col gap-1">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Tarjima</div>
+          <div
+            ref={cleanWrapRef}
+            className="relative min-h-0 flex-1 overflow-auto rounded-lg border bg-card"
+          >
+            <img ref={cleanImgRef} src={page.cleaned_image_url} alt="Cleaned" className="block w-full" />
+            <canvas ref={cleanCanvasRef} className="pointer-events-none absolute inset-0" />
+            {drawingMode && (
+              <>
+                <canvas ref={drawCanvasRef} className="absolute inset-0 cursor-crosshair" />
+                <div className="absolute bottom-2 left-2 rounded-md bg-black/70 px-2.5 py-1 text-[11px] text-white backdrop-blur">
+                  Matn joyini belgilang · Esc - bekor
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Text regions panel */}
+        <div className="flex min-h-0 flex-col gap-1">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Matnlar ({regions.length})
+          </div>
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-0.5">
+            {regions.length === 0 ? (
+              <div className="rounded-lg border border-dashed bg-card p-4 text-center text-xs text-muted-foreground">
+                Matn topilmadi
+              </div>
+            ) : (
+              regions.map((r, i) => {
+                const key = `${currentPage}-${i}`;
+                const draft = regionDrafts[key] || { original: "", translation: "" };
+                const isDirty =
+                  draft.original !== (r.original_text || "") ||
+                  draft.translation !== (r.uz_text || "");
+                return (
+                  <div key={key} className="group rounded-lg border bg-card">
+                    {/* Header: number + delete */}
+                    <div className="flex items-center justify-between px-2.5 pt-2">
+                      <span className="text-[11px] font-medium text-muted-foreground">{i + 1}</span>
+                      {confirmingDelete === key ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-muted-foreground">O'chirish?</span>
+                          <button
+                            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-destructive transition-colors hover:bg-destructive/15"
+                            onClick={async () => {
+                              if (!manga || !chapter) return;
+                              setConfirmingDelete(null);
+                              await api.deleteRegion(manga, chapter, currentPage, i);
+                              const updated = await api.getResults(manga, chapter);
+                              setData(updated);
+                            }}
+                          >
+                            Ha
+                          </button>
+                          <button
+                            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-accent"
+                            onClick={() => setConfirmingDelete(null)}
+                          >
+                            Yo'q
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          className="opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground hover:text-destructive"
+                          onClick={() => setConfirmingDelete(key)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                    {/* Textareas */}
+                    <div className="space-y-1 px-2.5 pb-2.5 pt-1">
+                      <textarea
+                        placeholder="Original"
+                        className="min-h-[28px] w-full resize-none rounded-md border bg-background px-2 py-1 text-xs placeholder:text-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        value={draft.original}
+                        onChange={(e) =>
+                          setRegionDrafts((prev) => ({
+                            ...prev,
+                            [key]: { ...draft, original: e.target.value, status: undefined },
+                          }))
+                        }
+                      />
+                      <textarea
+                        placeholder="Tarjima"
+                        className="min-h-[28px] w-full resize-none rounded-md border bg-background px-2 py-1 text-xs placeholder:text-muted-foreground/40 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                        value={draft.translation}
+                        onChange={(e) =>
+                          setRegionDrafts((prev) => ({
+                            ...prev,
+                            [key]: { ...draft, translation: e.target.value, status: undefined },
+                          }))
+                        }
+                      />
+                      {/* Save — only visible when dirty */}
+                      {(isDirty || draft.status) && (
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          {isDirty && (
+                            <button
+                              className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/25"
+                              onClick={async () => {
+                                if (!manga || !chapter) return;
+                                setRegionDrafts((prev) => ({
+                                  ...prev,
+                                  [key]: { ...draft, status: "..." },
+                                }));
+                                try {
+                                  await api.updateRegion(manga, chapter, currentPage, i, {
+                                    original_text: draft.original,
+                                    uz_text: draft.translation,
+                                  });
+                                  // Update the base data so isDirty resets
+                                  const updated = await api.getResults(manga!, chapter!);
+                                  setData(updated);
+                                } catch (e) {
+                                  const err = e as Error;
+                                  setRegionDrafts((prev) => ({
+                                    ...prev,
+                                    [key]: { ...draft, status: err.message },
+                                  }));
+                                }
+                              }}
+                            >
+                              <Save className="h-2.5 w-2.5" />
+                              Saqlash
+                            </button>
+                          )}
+                          {draft.status && (
+                            <span className="text-[10px] text-muted-foreground">{draft.status}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Reading mode overlay */}
+      {readingOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background">
+          <div className="flex items-center justify-between border-b bg-card px-6 py-3">
+            <span className="text-sm font-medium">To'liq o'qish</span>
+            <Button variant="ghost" size="sm" onClick={() => setReadingOpen(false)} className="gap-1.5">
+              <X className="h-4 w-4" />
               Yopish
             </Button>
           </div>
           <div className="flex-1 overflow-auto p-6">
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
               {pages
                 .filter((p) => p.cleaned_image_url)
-                .map((page, idx) => (
-                  <div key={`reading-${idx}`} className="rounded-2xl border bg-white p-4 shadow-sm">
+                .map((_p, idx) => (
+                  <div key={`reading-${idx}`} className="overflow-hidden rounded-lg border bg-card">
                     <canvas
                       ref={(el) => {
                         readingCanvasRefs.current[idx] = el;
@@ -700,7 +764,7 @@ export default function ResultsPage() {
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

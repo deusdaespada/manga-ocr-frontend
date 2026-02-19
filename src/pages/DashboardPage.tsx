@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  BookOpen,
+  Layers,
+  CheckCircle2,
+  Loader2,
+  DollarSign,
+  Plus,
+  ArrowRight,
+} from "lucide-react";
 
 import { api } from "../lib/api";
 import type { Project, Stats } from "../lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 
 function statusForProject(project: Project) {
   const statuses = project.chapters.map((ch) => ch.status);
@@ -24,6 +34,7 @@ const statusVariant: Record<string, "success" | "info" | "warning" | "danger"> =
 };
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Stats | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -45,103 +56,136 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const statCards = stats
+    ? [
+        { label: "Jami manga", value: stats.total_projects, icon: BookOpen, color: "text-indigo-400 bg-indigo-500/10" },
+        { label: "Jami chapter", value: stats.total_chapters, icon: Layers, color: "text-blue-400 bg-blue-500/10" },
+        { label: "Tayyor", value: stats.done_chapters, icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/10" },
+        { label: "Jarayonda", value: stats.processing_chapters, icon: Loader2, color: "text-amber-400 bg-amber-500/10" },
+        {
+          label: "API xarajat",
+          value: stats.total_cost_usd > 0 ? `$${stats.total_cost_usd.toFixed(4)}` : "$0",
+          icon: DollarSign,
+          color: "text-violet-400 bg-violet-500/10",
+          mono: true,
+        },
+      ]
+    : null;
+
   return (
-    <div className="space-y-10">
-      <section className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
-          <p className="mt-2 text-muted-foreground">
-            Manga pipeline holati va loyihalar statistikasi.
-          </p>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-description">Pipeline holati va loyihalar statistikasi.</p>
         </div>
-        <Link
-          to="/upload"
-          className="inline-flex items-center rounded-full bg-primary px-5 py-2 text-sm font-medium text-primary-foreground shadow-soft"
-        >
-          + Yangi yuklash
+        <Link to="/upload">
+          <Button size="sm" className="gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
+            Yangi yuklash
+          </Button>
         </Link>
-      </section>
+      </div>
 
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {stats ? (
-          [
-            { label: "Jami manga", value: stats.total_projects },
-            { label: "Jami chapter", value: stats.total_chapters },
-            { label: "Tayyor", value: stats.done_chapters },
-            { label: "Jarayonda", value: stats.processing_chapters },
-            {
-              label: "API xarajat",
-              value: stats.total_cost_usd > 0 ? `$${stats.total_cost_usd.toFixed(4)}` : "$0",
-              mono: true,
-            },
-          ].map((item) => (
-            <Card key={item.label} className="bg-white/80">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {item.label}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={item.mono ? "text-2xl font-semibold mono" : "text-2xl font-semibold"}>
-                  {item.value}
+      {/* Stats */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {statCards ? (
+          statCards.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="flex items-center gap-3 rounded-lg border bg-card p-3.5">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md ${item.color}`}>
+                  <Icon className="h-4 w-4" />
                 </div>
-              </CardContent>
-            </Card>
-          ))
+                <div>
+                  <div className="text-[11px] font-medium text-muted-foreground">{item.label}</div>
+                  <div className={`text-lg font-semibold ${item.mono ? "mono" : ""}`}>{item.value}</div>
+                </div>
+              </div>
+            );
+          })
         ) : (
-          <Card className="col-span-full">
-            <CardContent className="py-6 text-sm text-muted-foreground">
-              Statistikalar yuklanmoqda...
-            </CardContent>
-          </Card>
+          <div className="col-span-full rounded-lg border bg-card p-4 text-sm text-muted-foreground">
+            Statistikalar yuklanmoqda...
+          </div>
         )}
-      </section>
+      </div>
 
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Mangalar</h2>
-          <span className="text-sm text-muted-foreground">
-            {projects.length} ta loyiha
-          </span>
+      {/* Projects table */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Mangalar</h2>
+          <span className="text-xs text-muted-foreground">{projects.length} ta loyiha</span>
         </div>
 
         {error ? (
-          <Card>
-            <CardContent className="py-6 text-sm text-destructive">Xatolik: {error}</CardContent>
-          </Card>
+          <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-400">
+            Xatolik: {error}
+          </div>
         ) : projects.length === 0 ? (
-          <Card>
-            <CardContent className="py-10 text-center text-sm text-muted-foreground">
-              Hali manga yo'q. "Yangi yuklash" orqali boshlang.
-            </CardContent>
-          </Card>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card py-14 text-center">
+            <BookOpen className="mb-2 h-8 w-8 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">Hali manga yo'q</p>
+            <p className="mt-1 text-xs text-muted-foreground/60">
+              "Yangi yuklash" tugmasini bosib boshlang
+            </p>
+          </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {projects.map((project) => {
-              const { doneCount, mainStatus } = statusForProject(project);
-              return (
-                <Link key={project.name} to={`/project/${project.name}`} className="group">
-                  <Card className="transition hover:-translate-y-0.5 hover:shadow-lg">
-                    <CardContent className="space-y-3 p-6">
-                      <div className="text-lg font-semibold">{project.name}</div>
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span>{project.chapter_count} chapter</span>
-                        <span>•</span>
-                        <span>
-                          {doneCount}/{project.chapter_count} tayyor
-                        </span>
-                      </div>
-                      <Badge variant={statusVariant[mainStatus] || "info"}>
-                        {mainStatus}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
+          <div className="overflow-hidden rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Nomi</TableHead>
+                  <TableHead className="w-[100px]">Chapterlar</TableHead>
+                  <TableHead className="w-[120px]">Progress</TableHead>
+                  <TableHead className="w-[100px]">Status</TableHead>
+                  <TableHead className="w-[50px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {projects.map((project) => {
+                  const { doneCount, mainStatus } = statusForProject(project);
+                  const progress = project.chapter_count > 0
+                    ? Math.round((doneCount / project.chapter_count) * 100)
+                    : 0;
+                  return (
+                    <TableRow
+                      key={project.name}
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/project/${project.name}`)}
+                    >
+                      <TableCell className="font-medium">{project.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {doneCount}/{project.chapter_count}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="h-1.5 w-full max-w-[80px] overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all"
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-muted-foreground">{progress}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant[mainStatus] || "info"}>
+                          {mainStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
           </div>
         )}
-      </section>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Eye, Save, Trash2 } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { ResultsData } from "../lib/types";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 import { Textarea } from "../components/ui/textarea";
 
 type Draft = { original: string; translation: string; status?: string };
@@ -41,86 +41,112 @@ export default function EditorPage() {
   }, [manga, chapter]);
 
   if (!data) {
-    return <div className="text-muted-foreground">{status}</div>;
+    return <div className="p-8 text-sm text-muted-foreground">{status}</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="animate-fade-in space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="text-sm text-muted-foreground">
-            <Link to="/">Dashboard</Link> / <Link to={`/project/${manga}`}>{manga}</Link> / {chapter}
-          </div>
-          <h1 className="text-3xl font-semibold">OCR va tarjima tahrirlash</h1>
+          <Link
+            to={`/results/${manga}/${chapter}`}
+            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            {manga} / {chapter}
+          </Link>
+          <h1 className="page-title">OCR va tarjima tahrirlash</h1>
         </div>
         <Link to={`/results/${manga}/${chapter}`}>
-          <Button variant="outline">Natijalar</Button>
+          <Button variant="outline" size="sm" className="gap-1.5">
+            <Eye className="h-3.5 w-3.5" />
+            Natijalar
+          </Button>
         </Link>
       </div>
 
-      <div className="space-y-6">
+      {/* Pages */}
+      <div className="space-y-4">
         {data.pages.map((page, pageIdx) => (
-          <Card key={`page-${pageIdx}`}>
-            <CardContent className="space-y-4 p-6">
-              <div className="text-lg font-semibold">Sahifa {pageIdx + 1}</div>
-              {page.regions.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  Bu sahifada matn regionlari topilmadi.
-                </div>
-              ) : (
-                page.regions.map((region, regionIdx) => {
+          <div key={`page-${pageIdx}`} className="rounded-lg border bg-card">
+            <div className="border-b px-5 py-3">
+              <span className="text-sm font-medium">Sahifa {pageIdx + 1}</span>
+              <span className="ml-2 text-xs text-muted-foreground">
+                {page.regions.length} region
+              </span>
+            </div>
+            {page.regions.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                Bu sahifada matn regionlari topilmadi.
+              </div>
+            ) : (
+              <div className="divide-y">
+                {page.regions.map((region, regionIdx) => {
                   const key = `${pageIdx}-${regionIdx}`;
                   const draft = drafts[key] || { original: "", translation: "" };
                   return (
-                    <div key={`region-${pageIdx}-${regionIdx}`} className="rounded-xl border bg-white/70 p-4">
-                      <div className="mb-2 flex items-center justify-between text-sm text-muted-foreground">
-                        <span>
-                          Region {regionIdx + 1} [{region.bbox.x}, {region.bbox.y}, {region.bbox.w}, {region.bbox.h}]
+                    <div key={key} className="px-5 py-4">
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">
+                          Region {regionIdx + 1}
+                          <span className="mono ml-2">
+                            [{region.bbox.x}, {region.bbox.y}, {region.bbox.w}, {region.bbox.h}]
+                          </span>
                         </span>
                         <Button
                           size="sm"
-                          variant="destructive"
+                          variant="ghost"
+                          className="h-7 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={async () => {
                             if (!manga || !chapter) return;
                             if (!confirm("Bu regionni o'chirmoqchimisiz?")) return;
-                          await api.deleteRegion(manga, chapter, pageIdx, regionIdx);
-                          const updated = await api.getResults(manga, chapter);
-                          setData(updated);
-                          setDrafts(buildDrafts(updated));
-                        }}
+                            await api.deleteRegion(manga, chapter, pageIdx, regionIdx);
+                            const updated = await api.getResults(manga, chapter);
+                            setData(updated);
+                            setDrafts(buildDrafts(updated));
+                          }}
                         >
+                          <Trash2 className="mr-1 h-3 w-3" />
                           O'chirish
                         </Button>
                       </div>
-                      <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">OCR matn (original):</div>
-                        <Textarea
-                          value={draft.original}
-                          className="min-h-[80px]"
-                          onChange={(e) =>
-                            setDrafts((prev) => ({
-                              ...prev,
-                              [key]: { ...draft, original: e.target.value },
-                            }))
-                          }
-                        />
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            OCR matn (original)
+                          </label>
+                          <Textarea
+                            value={draft.original}
+                            className="min-h-[80px] text-sm"
+                            onChange={(e) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [key]: { ...draft, original: e.target.value },
+                              }))
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Tarjima (uz)
+                          </label>
+                          <Textarea
+                            value={draft.translation}
+                            className="min-h-[80px] text-sm"
+                            onChange={(e) =>
+                              setDrafts((prev) => ({
+                                ...prev,
+                                [key]: { ...draft, translation: e.target.value },
+                              }))
+                            }
+                          />
+                        </div>
                       </div>
-                      <div className="mt-3 space-y-2">
-                        <div className="text-xs text-muted-foreground">Tarjima (uz):</div>
-                        <Textarea
-                          value={draft.translation}
-                          className="min-h-[80px]"
-                          onChange={(e) =>
-                            setDrafts((prev) => ({
-                              ...prev,
-                              [key]: { ...draft, translation: e.target.value },
-                            }))
-                          }
-                        />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between">
+                      <div className="mt-3 flex items-center gap-2">
                         <Button
                           size="sm"
+                          className="h-8 gap-1.5 text-xs"
                           onClick={async () => {
                             if (!manga || !chapter) return;
                             setDrafts((prev) => ({
@@ -145,16 +171,19 @@ export default function EditorPage() {
                             }
                           }}
                         >
+                          <Save className="h-3.5 w-3.5" />
                           Saqlash
                         </Button>
-                        <div className="text-xs text-muted-foreground">{draft.status || ""}</div>
+                        {draft.status && (
+                          <span className="text-xs text-muted-foreground">{draft.status}</span>
+                        )}
                       </div>
                     </div>
                   );
-                })
-              )}
-            </CardContent>
-          </Card>
+                })}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>

@@ -3,26 +3,31 @@
 @tailwind utilities;
 
 :root {
-  --background: 36 33% 96%;
-  --foreground: 222 20% 15%;
-  --card: 0 0% 100%;
-  --card-foreground: 222 20% 15%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 20% 15%;
-  --primary: 18 85% 53%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 220 14% 95%;
-  --secondary-foreground: 222 20% 18%;
-  --muted: 210 20% 94%;
-  --muted-foreground: 215 16% 44%;
-  --accent: 46 100% 94%;
-  --accent-foreground: 18 30% 18%;
-  --destructive: 0 74% 54%;
+  /* Supabase-inspired dark theme */
+  --background: 0 0% 7%;
+  --foreground: 0 0% 93%;
+  --card: 0 0% 10%;
+  --card-foreground: 0 0% 93%;
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 93%;
+  --primary: 153 60% 53%;
+  --primary-foreground: 0 0% 7%;
+  --secondary: 0 0% 14%;
+  --secondary-foreground: 0 0% 63%;
+  --muted: 0 0% 14%;
+  --muted-foreground: 0 0% 56%;
+  --accent: 0 0% 14%;
+  --accent-foreground: 0 0% 93%;
+  --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 214 18% 86%;
-  --input: 214 18% 86%;
-  --ring: 18 85% 53%;
-  --radius: 14px;
+  --border: 0 0% 16%;
+  --input: 0 0% 16%;
+  --ring: 153 60% 53%;
+  --radius: 8px;
+  --sidebar: 0 0% 9%;
+  --sidebar-foreground: 0 0% 93%;
+  --sidebar-border: 0 0% 16%;
+  --sidebar-accent: 153 60% 53%;
 }
 
 * {
@@ -30,19 +35,10 @@
 }
 
 body {
-  font-family: "Work Sans", system-ui, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   background-color: hsl(var(--background));
-  background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.6), transparent 40%),
-    radial-gradient(circle at 85% 10%, rgba(255, 255, 255, 0.35), transparent 45%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.2));
+  color: hsl(var(--foreground));
   min-height: 100vh;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: "Source Serif 4", serif;
 }
 
 ::selection {
@@ -50,13 +46,44 @@ h4 {
   color: hsl(var(--primary-foreground));
 }
 
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 25%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 35%);
+}
+
 @layer components {
-  .container-page {
-    @apply mx-auto w-full max-w-6xl px-6 py-8;
+  .page-container {
+    @apply w-full px-6 py-6;
+  }
+
+  .page-header {
+    @apply mb-6;
+  }
+
+  .page-title {
+    @apply text-xl font-semibold tracking-tight text-foreground;
+  }
+
+  .page-description {
+    @apply mt-1 text-sm text-muted-foreground;
   }
 
   .section-card {
-    @apply rounded-2xl border bg-card p-6 shadow-soft;
+    @apply rounded-lg border bg-card p-5;
   }
 
   .label {

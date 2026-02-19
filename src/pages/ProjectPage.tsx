@@ -1,11 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  ArrowLeft,
+  Plus,
+  Languages,
+  Trash2,
+  Play,
+  Eye,
+  Pencil,
+  Loader2,
+  Save,
+  Settings2,
+} from "lucide-react";
 
 import { api } from "../lib/api";
 import type { Chapter, Project, ProjectSettings } from "../lib/types";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import {
   Select,
@@ -22,6 +33,15 @@ const statusVariant: Record<string, "success" | "info" | "warning" | "danger"> =
   processing: "warning",
   uploaded: "info",
   failed: "danger",
+};
+
+const statusLabel: Record<string, string> = {
+  done: "Tayyor",
+  ocr_done: "OCR tayyor",
+  translating: "Tarjima...",
+  processing: "Jarayonda",
+  uploaded: "Yuklangan",
+  failed: "Xatolik",
 };
 
 export default function ProjectPage() {
@@ -100,36 +120,53 @@ export default function ProjectPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="animate-fade-in space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="text-sm text-muted-foreground">Dashboard / {manga}</div>
-          <h1 className="text-3xl font-semibold">{manga}</h1>
+          <Link
+            to="/"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Dashboard
+          </Link>
+          <h1 className="page-title">{manga}</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link to={`/upload/${manga}`}>
-            <Button variant="outline">+ Bob qo'shish</Button>
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Bob qo'shish
+            </Button>
           </Link>
           {hasTranslating ? (
-            <Button variant="secondary" disabled>
-              Tarjima jarayonda...
+            <Button variant="secondary" size="sm" disabled className="gap-1.5">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Tarjima jarayonda
             </Button>
           ) : hasOcrDone ? (
-            <Button onClick={handleTranslateManga}>Tarjima qilish</Button>
+            <Button size="sm" onClick={handleTranslateManga} className="gap-1.5">
+              <Languages className="h-3.5 w-3.5" />
+              Tarjima qilish
+            </Button>
           ) : null}
-          <Link to="/">
-            <Button variant="outline">Ortga</Button>
-          </Link>
-          <Button variant="destructive" onClick={handleDeleteProject}>
+          <Button variant="destructive" size="sm" onClick={handleDeleteProject} className="gap-1.5">
+            <Trash2 className="h-3.5 w-3.5" />
             O'chirish
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardContent className="grid gap-4 p-6 md:grid-cols-4">
-          <div className="space-y-2">
-            <label className="label">Manba tili</label>
+      {/* Settings */}
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 border-b px-5 py-3">
+          <Settings2 className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">Sozlamalar</span>
+        </div>
+        <div className="grid gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Manba tili</label>
             <Select
               value={settings.language}
               onValueChange={(value) =>
@@ -147,8 +184,8 @@ export default function ProjectPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <label className="label">Tarjima backend</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Tarjima backend</label>
             <Select
               value={settings.backend}
               onValueChange={(value) =>
@@ -165,12 +202,15 @@ export default function ProjectPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <label className="label">OCR backend</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">OCR backend</label>
             <Select
               value={settings.ocr_backend}
               onValueChange={(value) =>
-                setSettings((prev) => ({ ...prev, ocr_backend: value as ProjectSettings["ocr_backend"] }))
+                setSettings((prev) => ({
+                  ...prev,
+                  ocr_backend: value as ProjectSettings["ocr_backend"],
+                }))
               }
             >
               <SelectTrigger>
@@ -183,93 +223,119 @@ export default function ProjectPage() {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <label className="label">Rasm limiti</label>
-            <Input
-              type="number"
-              min={0}
-              value={settings.limit}
-              onChange={(e) =>
-                setSettings((prev) => ({ ...prev, limit: Number.parseInt(e.target.value || "0", 10) }))
-              }
-            />
-          </div>
-          <div className="md:col-span-4">
-            <Button variant="outline" onClick={handleSave} disabled={saving}>
-              {saving ? "Saqlanmoqda..." : "Saqlash"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="space-y-4 p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Chapterlar</h2>
-            <span className="text-sm text-muted-foreground">{chapters.length} ta</span>
-          </div>
-
-          {chapters.length === 0 ? (
-            <div className="rounded-lg border bg-white/70 p-6 text-sm text-muted-foreground">
-              Chapter topilmadi. Yuklash sahifasidan rasm qo'shing.
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Rasm limiti</label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                value={settings.limit}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    limit: Number.parseInt(e.target.value || "0", 10),
+                  }))
+                }
+              />
+              <Button variant="outline" size="sm" onClick={handleSave} disabled={saving} className="shrink-0 gap-1.5">
+                <Save className="h-3.5 w-3.5" />
+                {saving ? "..." : "Saqlash"}
+              </Button>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {chapters.map((chapter) => {
-                const isClickable = chapter.status === "done" || chapter.status === "ocr_done";
-                return (
+          </div>
+        </div>
+      </div>
+
+      {/* Chapters */}
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center justify-between border-b px-5 py-3">
+          <span className="text-sm font-medium">Chapterlar</span>
+          <span className="text-xs text-muted-foreground">{chapters.length} ta</span>
+        </div>
+
+        {chapters.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-12 text-center">
+            <p className="text-sm text-muted-foreground">Chapter topilmadi</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">
+              Yuklash sahifasidan rasm qo'shing.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y">
+            {chapters.map((chapter) => {
+              const isClickable = chapter.status === "done" || chapter.status === "ocr_done";
+              return (
                 <div
                   key={chapter.name}
-                  className={`flex flex-col gap-3 rounded-xl border bg-white/80 p-4 md:flex-row md:items-center md:justify-between ${
-                    isClickable ? "cursor-pointer hover:shadow-lg transition" : ""
+                  className={`flex items-center justify-between gap-4 px-5 py-4 ${
+                    isClickable ? "cursor-pointer transition-colors hover:bg-muted/50" : ""
                   }`}
                   onClick={() => {
                     if (!project?.name || !isClickable) return;
                     navigate(`/results/${project.name}/${chapter.name}`);
                   }}
                 >
-                  <div>
-                    <div className="text-lg font-semibold">{chapter.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {chapter.image_count} rasm
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <div className="text-sm font-medium">{chapter.name}</div>
+                      <div className="text-xs text-muted-foreground">{chapter.image_count} rasm</div>
                     </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant={statusVariant[chapter.status] || "info"}>
-                      {chapter.status === "ocr_done"
-                        ? "OCR tayyor"
-                        : chapter.status === "translating"
-                        ? "Tarjima..."
-                        : chapter.status}
+                      {statusLabel[chapter.status] || chapter.status}
                     </Badge>
-                    {chapter.status === "done" && (
-                      <Link to={`/edit/${project?.name}/${chapter.name}`} onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" variant="outline">Tahrirlash</Button>
-                      </Link>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {(chapter.status === "done" || chapter.status === "ocr_done") && (
+                      <>
+                        <Link
+                          to={`/results/${project?.name}/${chapter.name}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs">
+                            <Eye className="h-3.5 w-3.5" />
+                            Ko'rish
+                          </Button>
+                        </Link>
+                        <Link
+                          to={`/edit/${project?.name}/${chapter.name}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs">
+                            <Pencil className="h-3.5 w-3.5" />
+                            Tahrir
+                          </Button>
+                        </Link>
+                      </>
                     )}
-                    {chapter.status === "ocr_done" && (
-                      <Link to={`/edit/${project?.name}/${chapter.name}`} onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" variant="outline">Tahrirlash</Button>
-                      </Link>
-                    )}
-                    {chapter.status === "processing" && chapter.job_id ? (
-                      <Link to={`/job/${chapter.job_id}`} onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" variant="outline">Progress</Button>
-                      </Link>
-                    ) : null}
-                    {chapter.status === "translating" && chapter.job_id ? (
-                      <Link to={`/job/${chapter.job_id}`} onClick={(e) => e.stopPropagation()}>
-                        <Button size="sm" variant="outline">Tarjima progress</Button>
-                      </Link>
-                    ) : null}
+                    {(chapter.status === "processing" || chapter.status === "translating") &&
+                      chapter.job_id && (
+                        <Link
+                          to={`/job/${chapter.job_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Progress
+                          </Button>
+                        </Link>
+                      )}
                     {(chapter.status === "uploaded" || chapter.status === "failed") && (
-                      <Button size="sm" onClick={(e) => { e.stopPropagation(); handleStartJob(chapter); }}>
-                        OCR ishga tushirish
+                      <Button
+                        size="sm"
+                        className="h-8 gap-1 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartJob(chapter);
+                        }}
+                      >
+                        <Play className="h-3.5 w-3.5" />
+                        OCR
                       </Button>
                     )}
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="ghost"
+                      className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={async (e) => {
                         e.stopPropagation();
                         if (!manga) return;
@@ -279,15 +345,15 @@ export default function ProjectPage() {
                         setProject(updated);
                       }}
                     >
-                      O'chirish
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
-              );})}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

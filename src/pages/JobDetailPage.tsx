@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, RotateCcw, Square, Eye, DollarSign } from "lucide-react";
 
 import { api } from "../lib/api";
 import type { JobInfo, WsMessage } from "../lib/types";
 import { useJobWebSocket } from "../lib/ws";
 import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Progress } from "../components/ui/progress";
 
@@ -24,9 +24,7 @@ export default function JobDetailPage() {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState("Kutilmoqda...");
   const [logs, setLogs] = useState<string[]>([]);
-  const [status, setStatus] = useState<"running" | "done" | "failed" | "cancelled" | "idle">(
-    "idle"
-  );
+  const [status, setStatus] = useState<"running" | "done" | "failed" | "cancelled" | "idle">("idle");
   const [costUsd, setCostUsd] = useState<number | null>(null);
   const [meta, setMeta] = useState<string>("");
 
@@ -49,47 +47,40 @@ export default function JobDetailPage() {
           setPhase("Xatolik!");
         }
       })
-      .catch(() => {
-        setStatus("failed");
-      });
+      .catch(() => setStatus("failed"));
   }, [jobId]);
 
-  const handleMessage = useCallback(
-    (data: WsMessage) => {
-      if (data.type === "log") {
-        const clean = data.message.replace(/\[PROGRESS:\d+]\s*/g, "");
-        if (clean.trim()) {
-          setLogs((prev) => [...prev, clean]);
-        }
-        if (typeof data.progress === "number") {
-          setProgress((prev) => Math.max(prev, data.progress));
-          setPhase(phaseForProgress(data.progress));
-        }
+  const handleMessage = useCallback((data: WsMessage) => {
+    if (data.type === "log") {
+      const clean = data.message.replace(/\[PROGRESS:\d+]\s*/g, "");
+      if (clean.trim()) setLogs((prev) => [...prev, clean]);
+      if (typeof data.progress === "number") {
+        setProgress((prev) => Math.max(prev, data.progress));
+        setPhase(phaseForProgress(data.progress));
       }
-      if (data.type === "done") {
-        setProgress(100);
-        setPhase("Tayyor!");
-        setStatus("done");
-        if (data.cost_usd) setCostUsd(data.cost_usd);
-        if (data.pages || data.regions || data.chapters) {
-          const stats: string[] = [];
-          if (data.pages) stats.push(`${data.pages} sahifa`);
-          if (data.regions) stats.push(`${data.regions} region`);
-          if (data.chapters) stats.push(`${data.chapters} chapter`);
-          setMeta(stats.join(", "));
-        }
+    }
+    if (data.type === "done") {
+      setProgress(100);
+      setPhase("Tayyor!");
+      setStatus("done");
+      if (data.cost_usd) setCostUsd(data.cost_usd);
+      if (data.pages || data.regions || data.chapters) {
+        const stats: string[] = [];
+        if (data.pages) stats.push(`${data.pages} sahifa`);
+        if (data.regions) stats.push(`${data.regions} region`);
+        if (data.chapters) stats.push(`${data.chapters} chapter`);
+        setMeta(stats.join(", "));
       }
-      if (data.type === "cancelled") {
-        setStatus("cancelled");
-        setPhase("Bekor qilindi");
-      }
-      if (data.type === "error") {
-        setStatus("failed");
-        setPhase("Xatolik!");
-      }
-    },
-    []
-  );
+    }
+    if (data.type === "cancelled") {
+      setStatus("cancelled");
+      setPhase("Bekor qilindi");
+    }
+    if (data.type === "error") {
+      setStatus("failed");
+      setPhase("Xatolik!");
+    }
+  }, []);
 
   const handleClose = useCallback(() => {
     if (!jobId) return;
@@ -124,86 +115,109 @@ export default function JobDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="animate-fade-in space-y-6">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">Job: {jobId}</h1>
-          {job ? (
-            <p className="mt-2 text-muted-foreground">
-              {job.manga} / {job.chapter || "—"} • {job.language?.toUpperCase()} • {job.backend}
+          <Link
+            to="/jobs"
+            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Joblar
+          </Link>
+          <h1 className="page-title flex items-center gap-3">
+            Job
+            <span className="mono text-lg font-normal text-muted-foreground">{jobId}</span>
+          </h1>
+          {job && (
+            <p className="page-description">
+              {job.manga} / {job.chapter || "—"} · {job.language?.toUpperCase()} · {job.backend}
             </p>
-          ) : null}
+          )}
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/jobs">
-            <Button variant="outline">Orqaga</Button>
-          </Link>
-          {status === "running" ? (
-            <Button variant="destructive" onClick={handleCancel}>
+          {status === "running" && (
+            <Button variant="destructive" size="sm" onClick={handleCancel} className="gap-1.5">
+              <Square className="h-3.5 w-3.5" />
               To'xtatish
             </Button>
-          ) : null}
+          )}
         </div>
       </div>
 
-      <Card>
-        <CardContent className="space-y-4 p-6">
-          <div className="flex items-center justify-between">
-            {statusBadge}
-            {meta ? <span className="text-sm text-muted-foreground">{meta}</span> : null}
-          </div>
+      {/* Progress card */}
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-center justify-between">
+          {statusBadge}
+          {meta && <span className="text-sm text-muted-foreground">{meta}</span>}
+        </div>
+        <div className="mt-4">
           <Progress value={progress} className={status === "failed" ? "bg-red-100" : undefined} />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{phase}</span>
-            <span>{progress}%</span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+          <span>{phase}</span>
+          <span className="mono text-xs">{progress}%</span>
+        </div>
+      </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="mb-3 text-sm font-medium">Loglar</div>
-          <div className="max-h-72 overflow-auto rounded-lg border bg-white/70 p-3 text-xs text-muted-foreground">
+      {/* Logs */}
+      <div className="rounded-lg border bg-card">
+        <div className="border-b px-5 py-3">
+          <span className="text-sm font-medium">Loglar</span>
+        </div>
+        <div className="max-h-72 overflow-auto p-4">
+          <div className="mono space-y-0.5 text-xs text-muted-foreground">
             {logs.length === 0 ? (
               <div>Ulanmoqda...</div>
             ) : (
-              logs.map((log, idx) => <div key={`${log}-${idx}`}>{log}</div>)
+              logs.map((log, idx) => (
+                <div key={`${log}-${idx}`} className="leading-relaxed">{log}</div>
+              ))
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {typeof costUsd === "number" ? (
-        <Card>
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <div className="text-sm text-muted-foreground">API xarajat</div>
-              <div className="text-2xl font-semibold mono">${costUsd.toFixed(6)}</div>
-            </div>
-            <Badge variant="warning">Hisob</Badge>
-          </CardContent>
-        </Card>
-      ) : null}
+      {/* Cost */}
+      {typeof costUsd === "number" && (
+        <div className="flex items-center gap-4 rounded-lg border bg-card p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+            <DollarSign className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground">API xarajat</div>
+            <div className="text-xl font-semibold mono">${costUsd.toFixed(6)}</div>
+          </div>
+        </div>
+      )}
 
-      {(status === "failed" || status === "cancelled") && job ? (
+      {/* Actions */}
+      {(status === "failed" || status === "cancelled") && job && (
         <div className="flex items-center gap-2">
           <Link to={`/project/${job.manga}`}>
             <Button variant="outline">Manga</Button>
           </Link>
-          <Button onClick={handleRestart}>Qayta ishga tushirish</Button>
+          <Button onClick={handleRestart} className="gap-1.5">
+            <RotateCcw className="h-4 w-4" />
+            Qayta ishga tushirish
+          </Button>
         </div>
-      ) : null}
+      )}
 
-      {status === "done" && job?.chapter ? (
+      {status === "done" && job?.chapter && (
         <div className="flex items-center gap-2">
           <Link to={`/project/${job.manga}`}>
             <Button variant="outline">Manga</Button>
           </Link>
           <Link to={`/results/${job.manga}/${job.chapter}`}>
-            <Button>Natijalarni ko'rish</Button>
+            <Button className="gap-1.5">
+              <Eye className="h-4 w-4" />
+              Natijalarni ko'rish
+            </Button>
           </Link>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
