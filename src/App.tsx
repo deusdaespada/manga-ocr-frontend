@@ -8,6 +8,7 @@ import JobDetailPage from "./pages/JobDetailPage";
 import ProjectPage from "./pages/ProjectPage";
 import ResultsPage from "./pages/ResultsPage";
 import EditorPage from "./pages/EditorPage";
+import NewProjectPage from "./pages/NewProjectPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/new" element={<NewProjectPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/upload/:manga" element={<UploadPage />} />
         <Route path="/jobs" element={<JobsPage />} />

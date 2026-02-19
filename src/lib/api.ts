@@ -1,10 +1,14 @@
 import type {
+  GenreOption,
   JobInfo,
   JobStartResponse,
   Project,
+  ProjectCreateRequest,
+  ProjectMetadataUpdate,
   RestartResponse,
   ResultsData,
   Stats,
+  Tag,
   TranslateResponse,
   UploadResponse,
 } from "./types";
@@ -30,6 +34,27 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
     }).then(handle);
+  },
+  createProject(payload: ProjectCreateRequest): Promise<Project> {
+    return fetch("/api/projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(handle<Project>);
+  },
+  updateProjectMetadata(name: string, metadata: ProjectMetadataUpdate) {
+    return fetch(`/api/projects/${encodeURIComponent(name)}/metadata`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(metadata),
+    }).then(handle);
+  },
+  getTags(): Promise<Tag[]> {
+    return fetch("/api/tags").then(handle<Tag[]>);
+  },
+  getGenres(search = ""): Promise<GenreOption[]> {
+    const q = search ? `?search=${encodeURIComponent(search)}` : "";
+    return fetch(`/api/options/genres${q}`).then(handle<GenreOption[]>);
   },
   deleteProject(name: string) {
     return fetch(`/api/projects/${encodeURIComponent(name)}`, {

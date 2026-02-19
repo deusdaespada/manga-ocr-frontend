@@ -13,12 +13,59 @@ export type Chapter = {
   job_id?: string | null;
 };
 
+export type ProjectMetadata = {
+  description: string;
+  title_uz: string;
+  title_ru: string;
+  title_en: string;
+  title_ja: string;
+  title_ko: string;
+  tags: string[];
+};
+
 export type Project = {
   name: string;
   chapters: Chapter[];
   chapter_count: number;
   created_at?: string;
   settings?: ProjectSettings;
+  metadata?: ProjectMetadata;
+};
+
+export type ProjectCreateRequest = {
+  name: string;
+  description?: string;
+  title_uz?: string;
+  title_ru?: string;
+  title_en?: string;
+  title_ja?: string;
+  title_ko?: string;
+  tags?: string[];
+  language?: "ja" | "ko" | "ru" | "en";
+  backend?: "openai" | "ollama" | "gemini";
+  ocr_backend?: "auto" | "openai" | "ollama";
+  limit?: number;
+};
+
+export type ProjectMetadataUpdate = {
+  description?: string;
+  title_uz?: string;
+  title_ru?: string;
+  title_en?: string;
+  title_ja?: string;
+  title_ko?: string;
+  tags?: string[];
+};
+
+export type Tag = {
+  id: number;
+  name: string;
+  project_count: number;
+};
+
+export type GenreOption = {
+  value: string;
+  label: string;
 };
 
 export type ProjectSettings = {

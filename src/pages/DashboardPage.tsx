@@ -12,6 +12,10 @@ import {
 
 import { api } from "../lib/api";
 import type { Project, Stats } from "../lib/types";
+
+function genreLabel(val: string) {
+  return val.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
@@ -80,10 +84,10 @@ export default function DashboardPage() {
           <h1 className="page-title">Dashboard</h1>
           <p className="page-description">Pipeline holati va loyihalar statistikasi.</p>
         </div>
-        <Link to="/upload">
+        <Link to="/new">
           <Button size="sm" className="gap-1.5">
             <Plus className="h-3.5 w-3.5" />
-            Yangi yuklash
+            Yangi manga
           </Button>
         </Link>
       </div>
@@ -155,7 +159,21 @@ export default function DashboardPage() {
                       className="cursor-pointer"
                       onClick={() => navigate(`/project/${project.name}`)}
                     >
-                      <TableCell className="font-medium">{project.name}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{project.name}</div>
+                        {project.metadata?.tags && project.metadata.tags.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {project.metadata.tags.slice(0, 3).map((tag) => (
+                              <span key={tag} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                                {genreLabel(tag)}
+                              </span>
+                            ))}
+                            {project.metadata.tags.length > 3 && (
+                              <span className="text-[10px] text-muted-foreground">+{project.metadata.tags.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {doneCount}/{project.chapter_count}
                       </TableCell>
