@@ -7,7 +7,8 @@ import type { JobInfo, WsMessage } from "../lib/types";
 import { useJobWebSocket } from "../lib/ws";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { Progress } from "../components/ui/progress";
+import JobProgressCard from "../components/job/JobProgressCard";
+import JobLogs from "../components/job/JobLogs";
 
 function phaseForProgress(progress: number) {
   if (progress <= 8) return "Tayyorgarlik...";
@@ -146,38 +147,15 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* Progress card */}
-      <div className="rounded-lg border bg-card p-6">
-        <div className="flex items-center justify-between">
-          {statusBadge}
-          {meta && <span className="text-sm text-muted-foreground">{meta}</span>}
-        </div>
-        <div className="mt-4">
-          <Progress value={progress} className={status === "failed" ? "bg-red-100" : undefined} />
-        </div>
-        <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
-          <span>{phase}</span>
-          <span className="mono text-xs">{progress}%</span>
-        </div>
-      </div>
+      <JobProgressCard
+        status={status}
+        progress={progress}
+        phase={phase}
+        meta={meta}
+        statusBadge={statusBadge}
+      />
 
-      {/* Logs */}
-      <div className="rounded-lg border bg-card">
-        <div className="border-b px-5 py-3">
-          <span className="text-sm font-medium">Loglar</span>
-        </div>
-        <div className="max-h-72 overflow-auto p-4">
-          <div className="mono space-y-0.5 text-xs text-muted-foreground">
-            {logs.length === 0 ? (
-              <div>Ulanmoqda...</div>
-            ) : (
-              logs.map((log, idx) => (
-                <div key={`${log}-${idx}`} className="leading-relaxed">{log}</div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+      <JobLogs logs={logs} />
 
       {/* Cost */}
       {typeof costUsd === "number" && (
