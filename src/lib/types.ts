@@ -24,7 +24,8 @@ export type ProjectMetadata = {
 };
 
 export type Project = {
-  name: string;
+  slug: string;
+  display_name: string;
   chapters: Chapter[];
   chapter_count: number;
   created_at?: string;
@@ -43,7 +44,7 @@ export type ProjectCreateRequest = {
   tags?: string[];
   language?: "ja" | "ko" | "ru" | "en";
   backend?: "openai" | "ollama" | "gemini";
-  ocr_backend?: "auto" | "openai" | "ollama";
+  ocr_backend?: "auto" | "openai" | "ollama" | "paddle";
   limit?: number;
 };
 
@@ -71,7 +72,7 @@ export type GenreOption = {
 export type ProjectSettings = {
   language: "ja" | "ko" | "ru" | "en";
   backend: "openai" | "ollama" | "gemini";
-  ocr_backend: "auto" | "openai" | "ollama";
+  ocr_backend: "auto" | "openai" | "ollama" | "paddle";
   limit: number;
 };
 
@@ -104,6 +105,7 @@ export type Region = {
   original_text?: string;
   uz_text?: string;
   manual?: boolean;
+  font_size?: number;
 };
 
 export type Page = {

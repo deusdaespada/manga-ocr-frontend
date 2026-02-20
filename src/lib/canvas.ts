@@ -47,16 +47,24 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     const maxWidth = Math.max(10, boxWidth - padding * 2);
     const maxHeight = Math.max(10, boxHeight - padding * 2);
 
-    let fontSize = Math.floor(Math.min(32, Math.max(12, boxHeight * 0.55)));
+    let fontSize: number;
+    if (r.font_size) {
+      // Qo'lda belgilangan o'lcham — auto-shrink qilinmaydi
+      fontSize = r.font_size;
+    } else {
+      fontSize = Math.floor(Math.min(32, Math.max(12, boxHeight * 0.55)));
+    }
     ctx.font = `700 ${fontSize}px 'Comic Neue'`;
     let lines = wrapText(ctx, text, maxWidth);
     let lineHeight = Math.floor(fontSize * 1.2);
 
-    while (fontSize > 10 && lines.length * lineHeight > maxHeight) {
-      fontSize -= 1;
-      lineHeight = Math.floor(fontSize * 1.2);
-      ctx.font = `700 ${fontSize}px 'Comic Neue'`;
-      lines = wrapText(ctx, text, maxWidth);
+    if (!r.font_size) {
+      while (fontSize > 10 && lines.length * lineHeight > maxHeight) {
+        fontSize -= 1;
+        lineHeight = Math.floor(fontSize * 1.2);
+        ctx.font = `700 ${fontSize}px 'Comic Neue'`;
+        lines = wrapText(ctx, text, maxWidth);
+      }
     }
 
     const totalTextHeight = lines.length * lineHeight;

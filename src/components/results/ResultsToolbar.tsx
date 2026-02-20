@@ -3,11 +3,13 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
+  Eraser,
   Pencil,
   Plus,
   X,
   Languages,
   BookOpen,
+  RotateCcw,
 } from "lucide-react";
 
 import type { ResultsData } from "../../lib/types";
@@ -32,13 +34,16 @@ interface ResultsToolbarProps {
   totalPages: number;
   translating: boolean;
   drawingMode: boolean;
+  cleanMode: boolean;
   confirmTranslate: boolean;
   setCurrentPage: (page: number) => void;
   setTranslating: (v: boolean) => void;
   setDrawingMode: (v: boolean | ((prev: boolean) => boolean)) => void;
+  setCleanMode: (v: boolean | ((prev: boolean) => boolean)) => void;
   setConfirmTranslate: (v: boolean) => void;
   setReadingOpen: (v: boolean) => void;
   onTranslateConfirm: () => void;
+  onRerunOcr: () => void;
   pagesCount: number;
 }
 
@@ -50,12 +55,15 @@ export default function ResultsToolbar({
   totalPages,
   translating,
   drawingMode,
+  cleanMode,
   confirmTranslate,
   setCurrentPage,
   setDrawingMode,
+  setCleanMode,
   setConfirmTranslate,
   setReadingOpen,
   onTranslateConfirm,
+  onRerunOcr,
   pagesCount,
 }: ResultsToolbarProps) {
   const costText = formatCost(data);
@@ -68,7 +76,7 @@ export default function ResultsToolbar({
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        <span>{manga}/{chapter}</span>
+        <span>{manga} / {chapter}-bob</span>
       </Link>
 
       <div className="h-4 w-px bg-border" />
@@ -130,6 +138,10 @@ export default function ResultsToolbar({
           {translating ? "..." : data?.translated ? "Qayta tarjima" : "Tarjima"}
         </Button>
       )}
+      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={onRerunOcr}>
+        <RotateCcw className="h-3 w-3" />
+        Qayta OCR
+      </Button>
       <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setCurrentPage(pagesCount)}>
         Matnlar
       </Button>
@@ -153,6 +165,18 @@ export default function ResultsToolbar({
           <><X className="h-3 w-3" />Bekor</>
         ) : (
           <><Plus className="h-3 w-3" />Region</>
+        )}
+      </Button>
+      <Button
+        variant={cleanMode ? "destructive" : "outline"}
+        size="sm"
+        className="h-7 gap-1 text-xs"
+        onClick={() => setCleanMode((prev: boolean) => !prev)}
+      >
+        {cleanMode ? (
+          <><X className="h-3 w-3" />Bekor</>
+        ) : (
+          <><Eraser className="h-3 w-3" />Tozalash</>
         )}
       </Button>
 

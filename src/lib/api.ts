@@ -25,11 +25,11 @@ export const api = {
   getProjects(): Promise<Project[]> {
     return fetch("/api/projects").then(handle<Project[]>);
   },
-  getProject(name: string): Promise<Project> {
-    return fetch(`/api/projects/${encodeURIComponent(name)}`).then(handle<Project>);
+  getProject(slug: string): Promise<Project> {
+    return fetch(`/api/projects/${encodeURIComponent(slug)}`).then(handle<Project>);
   },
-  saveProjectSettings(name: string, settings: Record<string, unknown>) {
-    return fetch(`/api/projects/${encodeURIComponent(name)}/settings`, {
+  saveProjectSettings(slug: string, settings: Record<string, unknown>) {
+    return fetch(`/api/projects/${encodeURIComponent(slug)}/settings`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(settings),
@@ -42,8 +42,8 @@ export const api = {
       body: JSON.stringify(payload),
     }).then(handle<Project>);
   },
-  updateProjectMetadata(name: string, metadata: ProjectMetadataUpdate) {
-    return fetch(`/api/projects/${encodeURIComponent(name)}/metadata`, {
+  updateProjectMetadata(slug: string, metadata: ProjectMetadataUpdate) {
+    return fetch(`/api/projects/${encodeURIComponent(slug)}/metadata`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(metadata),
@@ -56,8 +56,8 @@ export const api = {
     const q = search ? `?search=${encodeURIComponent(search)}` : "";
     return fetch(`/api/options/genres${q}`).then(handle<GenreOption[]>);
   },
-  deleteProject(name: string) {
-    return fetch(`/api/projects/${encodeURIComponent(name)}`, {
+  deleteProject(slug: string) {
+    return fetch(`/api/projects/${encodeURIComponent(slug)}`, {
       method: "DELETE",
     }).then(handle);
   },
@@ -69,15 +69,13 @@ export const api = {
   getStats(): Promise<Stats> {
     return fetch("/api/stats").then(handle<Stats>);
   },
-  uploadFiles(manga: string, chapter: string, files: File[]): Promise<UploadResponse> {
+  uploadFiles(slug: string, files: File[]): Promise<UploadResponse> {
     const form = new FormData();
-    form.append("manga_name", manga);
-    form.append("chapter_name", chapter);
     for (const f of files) {
       form.append("files", f);
     }
     return fetch(
-      `/api/upload?manga_name=${encodeURIComponent(manga)}&chapter_name=${encodeURIComponent(chapter)}`,
+      `/api/upload?manga_slug=${encodeURIComponent(slug)}`,
       { method: "POST", body: form }
     ).then(handle<UploadResponse>);
   },
@@ -141,5 +139,12 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(handle);
+  },
+  inpaintArea(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }): Promise<{ ok: boolean; image_url: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/clean/${pageIdx}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bbox }),
+    }).then(handle<{ ok: boolean; image_url: string }>);
   },
 };

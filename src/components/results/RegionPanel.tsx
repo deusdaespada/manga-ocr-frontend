@@ -1,4 +1,4 @@
-import { X, Save } from "lucide-react";
+import { X, Save, Minus, Plus, RotateCcw } from "lucide-react";
 
 import { api } from "../../lib/api";
 import type { Region, ResultsData } from "../../lib/types";
@@ -6,6 +6,7 @@ import type { Region, ResultsData } from "../../lib/types";
 export type RegionDraft = {
   original: string;
   translation: string;
+  fontSize?: number;
   status?: string;
 };
 
@@ -46,9 +47,12 @@ export default function RegionPanel({
           regions.map((r, i) => {
             const key = `${currentPage}-${i}`;
             const draft = regionDrafts[key] || { original: "", translation: "" };
+            const serverFontSize = r.font_size || 0;
+            const draftFontSize = draft.fontSize ?? serverFontSize;
             const isDirty =
               draft.original !== (r.original_text || "") ||
-              draft.translation !== (r.uz_text || "");
+              draft.translation !== (r.uz_text || "") ||
+              draftFontSize !== serverFontSize;
             return (
               <div key={key} className="group rounded-lg border bg-card">
                 {/* Header: number + delete */}
@@ -108,6 +112,51 @@ export default function RegionPanel({
                       }))
                     }
                   />
+                  {/* Font size control */}
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] text-muted-foreground w-6">Aa</span>
+                    <button
+                      className="flex h-5 w-5 items-center justify-center rounded border bg-background text-muted-foreground transition-colors hover:text-foreground"
+                      onClick={() =>
+                        setRegionDrafts((prev) => {
+                          const cur = prev[key]?.fontSize ?? draftFontSize;
+                          const base = cur || Math.floor(Math.min(32, Math.max(12, r.bbox.h * 0.55)));
+                          return { ...prev, [key]: { ...draft, fontSize: Math.max(6, base - 1), status: undefined } };
+                        })
+                      }
+                    >
+                      <Minus className="h-2.5 w-2.5" />
+                    </button>
+                    <span className="min-w-[28px] text-center text-[11px] tabular-nums">
+                      {draftFontSize || "auto"}
+                    </span>
+                    <button
+                      className="flex h-5 w-5 items-center justify-center rounded border bg-background text-muted-foreground transition-colors hover:text-foreground"
+                      onClick={() =>
+                        setRegionDrafts((prev) => {
+                          const cur = prev[key]?.fontSize ?? draftFontSize;
+                          const base = cur || Math.floor(Math.min(32, Math.max(12, r.bbox.h * 0.55)));
+                          return { ...prev, [key]: { ...draft, fontSize: Math.min(120, base + 1), status: undefined } };
+                        })
+                      }
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
+                    {draftFontSize > 0 && (
+                      <button
+                        className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+                        title="Auto"
+                        onClick={() =>
+                          setRegionDrafts((prev) => ({
+                            ...prev,
+                            [key]: { ...draft, fontSize: 0, status: undefined },
+                          }))
+                        }
+                      >
+                        <RotateCcw className="h-2.5 w-2.5" />
+                      </button>
+                    )}
+                  </div>
                   {/* Save — only visible when dirty */}
                   {(isDirty || draft.status) && (
                     <div className="flex items-center gap-1.5 pt-0.5">
@@ -120,10 +169,14 @@ export default function RegionPanel({
                               [key]: { ...draft, status: "..." },
                             }));
                             try {
-                              await api.updateRegion(manga, chapter, currentPage, i, {
+                              const payload: Record<string, unknown> = {
                                 original_text: draft.original,
                                 uz_text: draft.translation,
-                              });
+                              };
+                              if (draftFontSize !== serverFontSize) {
+                                payload.font_size = draftFontSize || 0;
+                              }
+                              await api.updateRegion(manga, chapter, currentPage, i, payload);
                               const updated = await api.getResults(manga, chapter);
                               onDataUpdate(updated);
                             } catch (e) {
