@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, Save, Loader2, Settings2 } from "lucide-react";
+import { X, Play, Loader2, RotateCcw } from "lucide-react";
 
 import { api } from "../../lib/api";
 import type { ProjectSettings, TranslatorModelInfo, TranslatorModelsMap } from "../../lib/types";
@@ -14,23 +14,31 @@ import {
   SelectValue,
 } from "../ui/select";
 
-interface SettingsModalProps {
+interface RerunOcrModalProps {
   open: boolean;
   settings: ProjectSettings;
   setSettings: React.Dispatch<React.SetStateAction<ProjectSettings>>;
-  saving: boolean;
-  onSave: () => void;
+  skipConfirm: boolean;
+  setSkipConfirm: (v: boolean) => void;
+  skipClean: boolean;
+  setSkipClean: (v: boolean) => void;
+  loading: boolean;
+  onRun: () => void;
   onClose: () => void;
 }
 
-export default function SettingsModal({
+export default function RerunOcrModal({
   open,
   settings,
   setSettings,
-  saving,
-  onSave,
+  skipConfirm,
+  setSkipConfirm,
+  skipClean,
+  setSkipClean,
+  loading,
+  onRun,
   onClose,
-}: SettingsModalProps) {
+}: RerunOcrModalProps) {
   const [modelsMap, setModelsMap] = useState<TranslatorModelsMap>({});
 
   useEffect(() => {
@@ -52,8 +60,8 @@ export default function SettingsModal({
       >
         <div className="flex items-center justify-between border-b px-5 py-3">
           <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Pipeline sozlamalari</span>
+            <RotateCcw className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Qayta OCR</span>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
@@ -166,14 +174,32 @@ export default function SettingsModal({
               />
             </div>
           </div>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={skipClean}
+              onChange={(e) => setSkipClean(e.target.checked)}
+              className="rounded border-input"
+            />
+            Faqat OCR (rasmlarni qayta tozalamaslik)
+          </label>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={skipConfirm}
+              onChange={(e) => setSkipConfirm(e.target.checked)}
+              className="rounded border-input"
+            />
+            Qayta ko'rsatmasin
+          </label>
         </div>
         <div className="flex items-center justify-end gap-2 border-t px-5 py-3">
           <Button variant="ghost" size="sm" onClick={onClose}>
             Bekor
           </Button>
-          <Button size="sm" className="gap-1" disabled={saving} onClick={onSave}>
-            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-            Saqlash
+          <Button size="sm" className="gap-1" disabled={loading} onClick={onRun}>
+            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+            Ishga tushirish
           </Button>
         </div>
       </div>

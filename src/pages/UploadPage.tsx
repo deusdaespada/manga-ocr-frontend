@@ -5,7 +5,6 @@ import { CloudUpload, X, Image as ImageIcon } from "lucide-react";
 import { api } from "../lib/api";
 import type { Project } from "../lib/types";
 import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
 
 export default function UploadPage() {
   const { manga } = useParams();
@@ -13,8 +12,7 @@ export default function UploadPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [status, setStatus] = useState<string>("");
-  const [mangaName, setMangaName] = useState(manga || "");
-  const [chapterName, setChapterName] = useState("");
+  const [mangaSlug, setMangaSlug] = useState(manga || "");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -26,10 +24,10 @@ export default function UploadPage() {
   }, []);
 
   useEffect(() => {
-    if (manga) setMangaName(manga);
+    if (manga) setMangaSlug(manga);
   }, [manga]);
 
-  const existing = projects.find((p) => p.name === mangaName.trim());
+  const existing = projects.find((p) => p.slug === mangaSlug);
 
   function onFiles(files: FileList | null) {
     if (!files) return;
@@ -45,8 +43,8 @@ export default function UploadPage() {
   }
 
   async function handleUpload() {
-    if (!mangaName.trim() || !chapterName.trim()) {
-      setStatus("Manga va chapter nomlarini kiriting");
+    if (!mangaSlug.trim()) {
+      setStatus("Manga tanlang");
       return;
     }
     if (selectedFiles.length === 0) {
@@ -55,8 +53,8 @@ export default function UploadPage() {
     }
     setStatus("Yuklanmoqda...");
     try {
-      const result = await api.uploadFiles(mangaName.trim(), chapterName.trim(), selectedFiles);
-      setStatus(`${result.saved} rasm yuklandi!`);
+      const result = await api.uploadFiles(mangaSlug.trim(), selectedFiles);
+      setStatus(`${result.saved} rasm yuklandi! (${result.chapter}-bob yaratildi)`);
       setSelectedFiles([]);
       setTimeout(() => navigate(`/project/${result.manga}`), 700);
     } catch (e) {
@@ -70,42 +68,31 @@ export default function UploadPage() {
       <div className="page-header">
         <h1 className="page-title">Rasm yuklash</h1>
         <p className="page-description">
-          Yangi manga yoki mavjudiga yangi chapter qo'shish.
+          Mavjud mangaga yangi chapter qo'shish. Bob raqami avtomatik beriladi.
         </p>
       </div>
 
       <div className="mx-auto max-w-2xl space-y-6">
-        {/* Manga name */}
+        {/* Manga select */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Manga nomi</label>
-          <Input
-            value={mangaName}
-            onChange={(e) => setMangaName(e.target.value)}
-            placeholder="masalan: one-piece"
-            list="manga-suggestions"
-          />
-          <datalist id="manga-suggestions">
+          <label className="text-sm font-medium">Manga</label>
+          <select
+            value={mangaSlug}
+            onChange={(e) => setMangaSlug(e.target.value)}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <option value="">Manga tanlang...</option>
             {projects.map((p) => (
-              <option key={p.name} value={p.name} />
+              <option key={p.slug} value={p.slug}>
+                {p.display_name}
+              </option>
             ))}
-          </datalist>
-          {mangaName.trim() && (
+          </select>
+          {existing && (
             <p className="text-xs text-muted-foreground">
-              {existing
-                ? `Mavjud manga — ${existing.chapter_count} chapter bor. Yangi chapter qo'shiladi.`
-                : "Yangi manga yaratiladi"}
+              {existing.chapter_count} chapter bor. Yangi chapter avtomatik raqamlanadi.
             </p>
           )}
-        </div>
-
-        {/* Chapter name */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Chapter nomi</label>
-          <Input
-            value={chapterName}
-            onChange={(e) => setChapterName(e.target.value)}
-            placeholder="masalan: 001"
-          />
         </div>
 
         {/* Drop zone */}
@@ -176,7 +163,7 @@ export default function UploadPage() {
 
         {/* Upload button */}
         <div className="flex items-center gap-3">
-          <Button onClick={handleUpload} disabled={selectedFiles.length === 0} className="gap-2">
+          <Button onClick={handleUpload} disabled={selectedFiles.length === 0 || !mangaSlug} className="gap-2">
             <CloudUpload className="h-4 w-4" />
             Yuklash
           </Button>

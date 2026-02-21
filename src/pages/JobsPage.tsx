@@ -69,7 +69,7 @@ export default function JobsPage() {
                   <TableCell className="mono text-xs text-muted-foreground">{job.id}</TableCell>
                   <TableCell className="font-medium">
                     {job.manga}
-                    <span className="text-muted-foreground"> / {job.chapter || "—"}</span>
+                    <span className="text-muted-foreground"> / {job.chapter ? `${job.chapter}-bob` : "—"}</span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {job.language?.toUpperCase()} · {job.backend}

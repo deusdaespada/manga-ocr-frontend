@@ -45,6 +45,8 @@ export type ProjectCreateRequest = {
   language?: "ja" | "ko" | "ru" | "en";
   backend?: "openai" | "ollama" | "gemini";
   ocr_backend?: "auto" | "openai" | "ollama" | "paddle";
+  cleaner_backend?: CleanerBackendValue;
+  translator_model?: string;
   limit?: number;
 };
 
@@ -69,11 +71,34 @@ export type GenreOption = {
   label: string;
 };
 
+export type CleanerBackendValue = "pcleaner" | "lama";
+
 export type ProjectSettings = {
   language: "ja" | "ko" | "ru" | "en";
   backend: "openai" | "ollama" | "gemini";
   ocr_backend: "auto" | "openai" | "ollama" | "paddle";
+  cleaner_backend: CleanerBackendValue;
+  translator_model: string;
   limit: number;
+};
+
+export type TranslatorModelInfo = {
+  value: string;
+  label: string;
+  default?: boolean;
+};
+
+export type TranslatorModelsMap = Record<string, TranslatorModelInfo[]>;
+
+export type OcrBackendValue = ProjectSettings["ocr_backend"];
+
+export type OcrBackendInfo = {
+  value: OcrBackendValue;
+  label: string;
+  type: "local" | "api";
+  monthly_limit?: number;
+  used?: number;
+  remaining?: number;
 };
 
 export type JobStatus = "running" | "done" | "failed" | "cancelled";
@@ -106,6 +131,10 @@ export type Region = {
   uz_text?: string;
   manual?: boolean;
   font_size?: number;
+  rotation?: number;
+  font_weight?: string;
+  font_color?: string;
+  font_family?: string;
 };
 
 export type Page = {
@@ -130,6 +159,41 @@ export type ResultsData = {
   translator_usage?: UsageInfo;
 };
 
+export type StepTiming = {
+  elapsed_sec: number;
+  segments?: number;
+  masks?: number;
+  regions?: number;
+  texts?: number;
+  skipped?: boolean;
+};
+
+export type RunConfig = {
+  language?: string;
+  ocr_backend?: string;
+  cleaner_backend?: string;
+  translator_backend?: string;
+  translator_model?: string;
+  skip_clean?: boolean;
+};
+
+export type RunEntry = {
+  job_id: string;
+  started_at: string;
+  finished_at: string;
+  total_sec: number;
+  config: RunConfig;
+  steps: Record<string, StepTiming>;
+  pages?: number;
+  regions?: number;
+};
+
+export type RunInfo = {
+  version: number;
+  ocr_run?: RunEntry;
+  translate_run?: RunEntry;
+};
+
 export type WsMessage =
   | { type: "log"; message: string; level: string; progress: number }
   | { type: "done"; message: string; progress: number; pages?: number; regions?: number; chapters?: number; cost_usd?: number }
@@ -141,3 +205,10 @@ export type UploadResponse = { manga: string; chapter: string; saved: number };
 export type JobStartResponse = { job_id: string };
 export type TranslateResponse = { job_id: string; type?: string };
 export type RestartResponse = { job_id: string; old_job_id?: string };
+export type RetranslateResponse = { ok: boolean; retranslated: number };
+
+export type RetranslateRequest = {
+  regions?: { page_idx: number; region_idx: number }[];
+  all?: boolean;
+  backend?: string;
+};

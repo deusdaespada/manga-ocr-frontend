@@ -54,7 +54,7 @@ export default function EditorPage() {
             className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            {manga} / {chapter}
+            {manga} / {chapter}-bob
           </Link>
           <h1 className="page-title">OCR va tarjima tahrirlash</h1>
         </div>

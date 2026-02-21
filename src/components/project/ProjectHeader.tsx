@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 
 interface ProjectHeaderProps {
   manga: string;
+  displayName: string;
   hasOcrDone: boolean;
   hasTranslating: boolean;
   onTranslate: () => void;
@@ -13,6 +14,7 @@ interface ProjectHeaderProps {
 
 export default function ProjectHeader({
   manga,
+  displayName,
   hasOcrDone,
   hasTranslating,
   onTranslate,
@@ -28,7 +30,7 @@ export default function ProjectHeader({
           <ArrowLeft className="h-3.5 w-3.5" />
           Dashboard
         </Link>
-        <h1 className="page-title">{manga}</h1>
+        <h1 className="page-title">{displayName}</h1>
       </div>
       <div className="flex flex-wrap gap-2">
         <Link to={`/upload/${manga}`}>

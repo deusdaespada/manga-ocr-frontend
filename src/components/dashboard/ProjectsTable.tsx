@@ -73,12 +73,12 @@ export default function ProjectsTable({ projects, error }: ProjectsTableProps) {
                   : 0;
                 return (
                   <TableRow
-                    key={project.name}
+                    key={project.slug}
                     className="cursor-pointer"
-                    onClick={() => navigate(`/project/${project.name}`)}
+                    onClick={() => navigate(`/project/${project.slug}`)}
                   >
                     <TableCell>
-                      <div className="font-medium">{project.name}</div>
+                      <div className="font-medium">{project.display_name}</div>
                       {project.metadata?.tags && project.metadata.tags.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {project.metadata.tags.slice(0, 3).map((tag) => (

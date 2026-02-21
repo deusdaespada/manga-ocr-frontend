@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Loader2 } from "lucide-react";
 
 import { api } from "../lib/api";
+import type { CleanerBackendValue, OcrBackendValue, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -14,6 +15,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import GenrePicker from "../components/GenrePicker";
+import OcrBackendSelect from "../components/OcrBackendSelect";
 
 export default function NewProjectPage() {
   const navigate = useNavigate();
@@ -30,7 +32,17 @@ export default function NewProjectPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [language, setLanguage] = useState<"ja" | "ko" | "ru" | "en">("ja");
   const [backend, setBackend] = useState<"openai" | "ollama" | "gemini">("openai");
-  const [ocrBackend, setOcrBackend] = useState<"auto" | "openai" | "ollama">("auto");
+  const [ocrBackend, setOcrBackend] = useState<OcrBackendValue>("auto");
+  const [cleanerBackend, setCleanerBackend] = useState<CleanerBackendValue>("pcleaner");
+  const [translatorModel, setTranslatorModel] = useState("");
+  const [modelsMap, setModelsMap] = useState<TranslatorModelsMap>({});
+
+  useEffect(() => {
+    api.getTranslatorModels().then(setModelsMap).catch(() => {});
+  }, []);
+
+  const currentModels: TranslatorModelInfo[] = modelsMap[backend] || [];
+  const defaultModel = currentModels.find((m) => m.default)?.value || "";
 
   async function handleCreate() {
     if (!name.trim()) {
@@ -56,8 +68,10 @@ export default function NewProjectPage() {
         language,
         backend,
         ocr_backend: ocrBackend,
+        cleaner_backend: cleanerBackend,
+        translator_model: translatorModel || undefined,
       });
-      navigate(`/project/${result.name}`);
+      navigate(`/project/${result.slug}`);
     } catch (e) {
       const err = e as Error;
       setError(err.message);
@@ -133,7 +147,7 @@ export default function NewProjectPage() {
         </div>
 
         {/* Pipeline settings inline */}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Manba tili</label>
             <Select value={language} onValueChange={(v) => setLanguage(v as typeof language)}>
@@ -150,7 +164,7 @@ export default function NewProjectPage() {
           </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Tarjima backend</label>
-            <Select value={backend} onValueChange={(v) => setBackend(v as typeof backend)}>
+            <Select value={backend} onValueChange={(v) => { setBackend(v as typeof backend); setTranslatorModel(""); }}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -162,15 +176,33 @@ export default function NewProjectPage() {
             </Select>
           </div>
           <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Tarjima modeli</label>
+            <Select value={translatorModel || defaultModel} onValueChange={setTranslatorModel}>
+              <SelectTrigger>
+                <SelectValue placeholder="Model" />
+              </SelectTrigger>
+              <SelectContent>
+                {currentModels.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}{m.default ? " (default)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
             <label className="text-xs text-muted-foreground">OCR backend</label>
-            <Select value={ocrBackend} onValueChange={(v) => setOcrBackend(v as typeof ocrBackend)}>
+            <OcrBackendSelect value={ocrBackend} onValueChange={setOcrBackend} />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Cleaner backend</label>
+            <Select value={cleanerBackend} onValueChange={(v) => setCleanerBackend(v as CleanerBackendValue)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">Local (Auto)</SelectItem>
-                <SelectItem value="openai">OpenAI Vision</SelectItem>
-                <SelectItem value="ollama">Ollama Vision</SelectItem>
+                <SelectItem value="pcleaner">PCleaner (default)</SelectItem>
+                <SelectItem value="lama">LaMa (best)</SelectItem>
               </SelectContent>
             </Select>
           </div>

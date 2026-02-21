@@ -47,6 +47,9 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     const maxWidth = Math.max(10, boxWidth - padding * 2);
     const maxHeight = Math.max(10, boxHeight - padding * 2);
 
+    const fontWeight = r.font_weight === "normal" ? "400" : "700";
+    const fontFamily = r.font_family || "Comic Neue";
+
     let fontSize: number;
     if (r.font_size) {
       // Qo'lda belgilangan o'lcham — auto-shrink qilinmaydi
@@ -54,7 +57,7 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     } else {
       fontSize = Math.floor(Math.min(32, Math.max(12, boxHeight * 0.55)));
     }
-    ctx.font = `700 ${fontSize}px 'Comic Neue'`;
+    ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}'`;
     let lines = wrapText(ctx, text, maxWidth);
     let lineHeight = Math.floor(fontSize * 1.2);
 
@@ -62,7 +65,7 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
       while (fontSize > 10 && lines.length * lineHeight > maxHeight) {
         fontSize -= 1;
         lineHeight = Math.floor(fontSize * 1.2);
-        ctx.font = `700 ${fontSize}px 'Comic Neue'`;
+        ctx.font = `${fontWeight} ${fontSize}px '${fontFamily}'`;
         lines = wrapText(ctx, text, maxWidth);
       }
     }
@@ -71,10 +74,19 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     const startY = r.bbox.y + padding + Math.max(0, (maxHeight - totalTextHeight) / 2);
 
     ctx.save();
+    const rot = r.rotation || 0;
+    if (rot) {
+      const cx = r.bbox.x + boxWidth / 2;
+      const cy = r.bbox.y + boxHeight / 2;
+      ctx.translate(cx, cy);
+      ctx.rotate(rot * Math.PI / 180);
+      ctx.translate(-cx, -cy);
+    }
     ctx.beginPath();
     ctx.rect(r.bbox.x, r.bbox.y, boxWidth, boxHeight);
     ctx.clip();
-    ctx.fillStyle = "rgba(17, 24, 39, 0.92)";
+    const fontColor = r.font_color || "#111827";
+    ctx.fillStyle = fontColor.startsWith("#") ? fontColor : `rgba(17, 24, 39, 0.92)`;
     lines.forEach((line, idx) => {
       ctx.fillText(line, r.bbox.x + boxWidth / 2, startY + idx * lineHeight);
     });

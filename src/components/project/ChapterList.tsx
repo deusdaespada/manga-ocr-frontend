@@ -46,6 +46,7 @@ export default function ChapterList({
       language: settings.language,
       backend: settings.backend,
       ocr_backend: settings.ocr_backend,
+      translator_model: settings.translator_model || undefined,
       limit: settings.limit,
     });
     navigate(`/job/${result.job_id}`);
@@ -83,7 +84,7 @@ export default function ChapterList({
                 >
                   <div className="flex items-center gap-4">
                     <div>
-                      <div className="text-sm font-medium">{chapter.name}</div>
+                      <div className="text-sm font-medium">{chapter.name}-bob</div>
                       <div className="text-xs text-muted-foreground">{chapter.image_count} rasm</div>
                     </div>
                     <Badge variant={statusVariant[chapter.status] || "info"}>
@@ -144,7 +145,7 @@ export default function ChapterList({
                       className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={async (e) => {
                         e.stopPropagation();
-                        if (!confirm(`"${chapter.name}" bobni o'chirmoqchimisiz?`)) return;
+                        if (!confirm(`${chapter.name}-bobni o'chirmoqchimisiz?`)) return;
                         await api.deleteChapter(projectName, chapter.name);
                         const updated = await api.getProject(projectName);
                         onProjectUpdate(updated);

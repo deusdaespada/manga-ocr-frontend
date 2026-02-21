@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, RotateCcw, Square, Eye, DollarSign } from "lucide-react";
+import { toast } from "sonner";
 
 import { api } from "../lib/api";
 import type { JobInfo, WsMessage } from "../lib/types";
@@ -80,6 +81,7 @@ export default function JobDetailPage() {
     if (data.type === "error") {
       setStatus("failed");
       setPhase("Xatolik!");
+      toast.error(data.message || "Job xatolik bilan tugadi");
     }
   }, []);
 
@@ -133,7 +135,7 @@ export default function JobDetailPage() {
           </h1>
           {job && (
             <p className="page-description">
-              {job.manga} / {job.chapter || "—"} · {job.language?.toUpperCase()} · {job.backend}
+              {job.manga} / {job.chapter ? `${job.chapter}-bob` : "—"} · {job.language?.toUpperCase()} · {job.backend}
             </p>
           )}
         </div>

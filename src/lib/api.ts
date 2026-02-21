@@ -2,14 +2,19 @@ import type {
   GenreOption,
   JobInfo,
   JobStartResponse,
+  OcrBackendInfo,
   Project,
   ProjectCreateRequest,
   ProjectMetadataUpdate,
   RestartResponse,
   ResultsData,
+  RetranslateRequest,
+  RetranslateResponse,
+  RunInfo,
   Stats,
   Tag,
   TranslateResponse,
+  TranslatorModelsMap,
   UploadResponse,
 } from "./types";
 
@@ -69,6 +74,12 @@ export const api = {
   getStats(): Promise<Stats> {
     return fetch("/api/stats").then(handle<Stats>);
   },
+  getOcrBackends(): Promise<OcrBackendInfo[]> {
+    return fetch("/api/ocr-backends").then(handle<OcrBackendInfo[]>);
+  },
+  getTranslatorModels(): Promise<TranslatorModelsMap> {
+    return fetch("/api/translator-models").then(handle<TranslatorModelsMap>);
+  },
   uploadFiles(slug: string, files: File[]): Promise<UploadResponse> {
     const form = new FormData();
     for (const f of files) {
@@ -121,6 +132,11 @@ export const api = {
       handle<ResultsData>
     );
   },
+  getRunInfo(manga: string, chapter: string): Promise<RunInfo | null> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/run-info`).then(
+      (res) => (res.ok ? (res.json() as Promise<RunInfo>) : null)
+    );
+  },
   addRegion(manga: string, chapter: string, pageIdx: number, payload: Record<string, unknown>) {
     return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/regions/${pageIdx}`, {
       method: "POST",
@@ -146,5 +162,45 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bbox }),
     }).then(handle<{ ok: boolean; image_url: string }>);
+  },
+  inpaintMask(manga: string, chapter: string, pageIdx: number, maskBase64: string): Promise<{ ok: boolean; image_url: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/clean-mask/${pageIdx}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mask: maskBase64 }),
+    }).then(handle<{ ok: boolean; image_url: string }>);
+  },
+  drawBubble(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }, shape: "rect" | "oval"): Promise<{ ok: boolean; image_url: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/draw-bubble/${pageIdx}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bbox, shape }),
+    }).then(handle<{ ok: boolean; image_url: string }>);
+  },
+  undoClean(manga: string, chapter: string, pageIdx: number): Promise<{ ok: boolean; image_url: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/clean-undo/${pageIdx}`, {
+      method: "POST",
+    }).then(handle<{ ok: boolean; image_url: string }>);
+  },
+  reocrPage(manga: string, chapter: string, pageIdx: number): Promise<{ ok: boolean; updated: number }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/reocr-page/${pageIdx}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backend: "openai" }),
+    }).then(handle<{ ok: boolean; updated: number }>);
+  },
+  reocrRegion(manga: string, chapter: string, pageIdx: number, regionIdx: number): Promise<{ ok: boolean; text: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/reocr-region`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page_idx: pageIdx, region_idx: regionIdx, backend: "openai" }),
+    }).then(handle<{ ok: boolean; text: string }>);
+  },
+  retranslateRegions(manga: string, chapter: string, payload: RetranslateRequest): Promise<RetranslateResponse> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/retranslate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(handle<RetranslateResponse>);
   },
 };

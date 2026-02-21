@@ -17,6 +17,8 @@ export default function ProjectPage() {
     language: "ja",
     backend: "openai",
     ocr_backend: "auto",
+    cleaner_backend: "pcleaner",
+    translator_model: "",
     limit: 0,
   });
   const [saving, setSaving] = useState(false);
@@ -45,6 +47,8 @@ export default function ProjectPage() {
             language: data.settings.language,
             backend: data.settings.backend,
             ocr_backend: data.settings.ocr_backend,
+            cleaner_backend: data.settings.cleaner_backend || "pcleaner",
+            translator_model: data.settings.translator_model || "",
             limit: data.settings.limit || 0,
           });
         }
@@ -95,18 +99,21 @@ export default function ProjectPage() {
 
   async function handleDeleteProject() {
     if (!manga) return;
-    if (!confirm(`"${manga}" ni o'chirmoqchimisiz? Barcha fayllar o'chadi!`)) return;
+    const displayName = project?.display_name || manga;
+    if (!confirm(`"${displayName}" ni o'chirmoqchimisiz? Barcha fayllar o'chadi!`)) return;
     await api.deleteProject(manga);
     navigate("/");
   }
 
   async function handleTranslateManga() {
     if (!manga) return;
-    if (!confirm(`Butun "${manga}" mangasini tarjima qilmoqchimisiz?`)) return;
+    const displayName = project?.display_name || manga;
+    if (!confirm(`Butun "${displayName}" mangasini tarjima qilmoqchimisiz?`)) return;
     const result = await api.translateManga({
       manga,
       language: settings.language,
       backend: settings.backend,
+      translator_model: settings.translator_model || undefined,
     });
     navigate(`/job/${result.job_id}`);
   }
@@ -115,6 +122,7 @@ export default function ProjectPage() {
     <div className="animate-fade-in space-y-6">
       <ProjectHeader
         manga={manga!}
+        displayName={project?.display_name || manga!}
         hasOcrDone={hasOcrDone}
         hasTranslating={hasTranslating}
         onTranslate={handleTranslateManga}
