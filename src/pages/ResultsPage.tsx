@@ -3,15 +3,16 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { api } from "../lib/api";
-import { drawTranslatedTexts } from "../lib/canvas";
+import { drawTranslatedTexts, renderPageForExport } from "../lib/canvas";
 import type { Page, ProjectSettings, Region, ResultsData } from "../lib/types";
 import ResultsToolbar from "../components/results/ResultsToolbar";
-import RunInfoPanel from "../components/results/RunInfoPanel";
+import { useRunInfo, RunInfoModal } from "../components/results/RunInfoPanel";
 import ImagePanel from "../components/results/ImagePanel";
 import RegionPanel from "../components/results/RegionPanel";
 import type { RegionDraft } from "../components/results/RegionPanel";
 import TranslationTextsView from "../components/results/TranslationTextsView";
 import ReadingOverlay from "../components/results/ReadingOverlay";
+import ActionSidebar from "../components/results/ActionSidebar";
 import RerunOcrModal from "../components/results/RerunOcrModal";
 
 function collectTexts(pages: Page[]) {
@@ -55,11 +56,14 @@ export default function ResultsPage() {
   const [drawingMode, setDrawingMode] = useState(false);
   const [cleanMode, setCleanMode] = useState(false);
   const [lineCleanMode, setLineCleanMode] = useState(false);
+  const [ocrMode, setOcrMode] = useState(false);
   const [bubbleMode, setBubbleMode] = useState<"rect" | "oval" | null>(null);
   const [pageHasClean, setPageHasClean] = useState(false);
   const [brushSize, setBrushSize] = useState(20);
   const [status, setStatus] = useState<string>("Yuklanmoqda...");
   const [readingOpen, setReadingOpen] = useState(false);
+  const [runInfoOpen, setRunInfoOpen] = useState(false);
+  const runInfo = useRunInfo(manga || "", chapter || "");
   const [regionDrafts, setRegionDrafts] = useState<Record<string, RegionDraft>>({});
   const [translating, setTranslating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
@@ -72,6 +76,7 @@ export default function ResultsPage() {
 
   const originalImgRef = useRef<HTMLImageElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const ocrCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cleanImgRef = useRef<HTMLImageElement | null>(null);
   const cleanCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -97,6 +102,7 @@ export default function ResultsPage() {
               fontSize: r.font_size || 0,
               rotation: r.rotation || 0,
               fontWeight: r.font_weight || "bold",
+              fontStyle: r.font_style || "normal",
               fontColor: r.font_color || "#111827",
               fontFamily: r.font_family || "Comic Neue",
             };
@@ -130,7 +136,7 @@ export default function ResultsPage() {
   );
 
   const renderTextOverlay = useCallback(
-    (img: HTMLImageElement, canvas: HTMLCanvasElement, regions: Region[]) => {
+    async (img: HTMLImageElement, canvas: HTMLCanvasElement, regions: Region[]) => {
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
       canvas.width = img.naturalWidth;
@@ -138,6 +144,7 @@ export default function ResultsPage() {
       canvas.style.width = `${img.clientWidth}px`;
       canvas.style.height = `${img.clientHeight}px`;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      await document.fonts.ready;
       drawTranslatedTexts(ctx, regions);
     },
     []
@@ -155,6 +162,7 @@ export default function ResultsPage() {
       if (draft.fontSize) patched.font_size = draft.fontSize;
       if (draft.rotation !== undefined) patched.rotation = draft.rotation;
       if (draft.fontWeight !== undefined) patched.font_weight = draft.fontWeight;
+      if (draft.fontStyle !== undefined) patched.font_style = draft.fontStyle;
       if (draft.fontColor !== undefined) patched.font_color = draft.fontColor;
       if (draft.fontFamily !== undefined) patched.font_family = draft.fontFamily;
       return patched;
@@ -199,6 +207,7 @@ export default function ResultsPage() {
         const serverFontSize = r.font_size || 0;
         const serverRotation = r.rotation || 0;
         const serverFontWeight = r.font_weight || "bold";
+        const serverFontStyle = r.font_style || "normal";
         const serverFontColor = r.font_color || "#111827";
         const serverFontFamily = r.font_family || "Comic Neue";
         // Agar draft o'zgartirilgan bo'lsa — saqlab qolish
@@ -209,6 +218,7 @@ export default function ResultsPage() {
             (existing.fontSize ?? serverFontSize) !== serverFontSize ||
             (existing.rotation ?? serverRotation) !== serverRotation ||
             (existing.fontWeight ?? serverFontWeight) !== serverFontWeight ||
+            (existing.fontStyle ?? serverFontStyle) !== serverFontStyle ||
             (existing.fontColor ?? serverFontColor) !== serverFontColor ||
             (existing.fontFamily ?? serverFontFamily) !== serverFontFamily) &&
           !existing.status
@@ -221,6 +231,7 @@ export default function ResultsPage() {
             fontSize: serverFontSize,
             rotation: serverRotation,
             fontWeight: serverFontWeight,
+            fontStyle: serverFontStyle,
             fontColor: serverFontColor,
             fontFamily: serverFontFamily,
           };
@@ -320,6 +331,97 @@ export default function ResultsPage() {
       document.removeEventListener("keydown", onKey);
     };
   }, [drawingMode, manga, chapter, currentPage]);
+
+  /* ── OCR mode — original panelda to'rtburchak chizib OCR qilish ── */
+  useEffect(() => {
+    if (!ocrMode) return;
+    const origImg = originalImgRef.current;
+    const ocrCanvas = ocrCanvasRef.current;
+    if (!origImg || !ocrCanvas) return;
+    const canvas = ocrCanvas;
+    canvas.width = origImg.naturalWidth;
+    canvas.height = origImg.naturalHeight;
+    canvas.style.width = `${origImg.clientWidth}px`;
+    canvas.style.height = `${origImg.clientHeight}px`;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    let startX = 0;
+    let startY = 0;
+    let isDrawing = false;
+
+    function getCoords(e: MouseEvent) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+
+    function onDown(e: MouseEvent) {
+      e.preventDefault();
+      const coords = getCoords(e);
+      startX = coords.x;
+      startY = coords.y;
+      isDrawing = true;
+    }
+
+    function onMove(e: MouseEvent) {
+      if (!isDrawing) return;
+      const drawCtx = canvas.getContext("2d");
+      if (!drawCtx) return;
+      const coords = getCoords(e);
+      drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+      const x = Math.min(startX, coords.x);
+      const y = Math.min(startY, coords.y);
+      const w = Math.abs(coords.x - startX);
+      const h = Math.abs(coords.y - startY);
+      drawCtx.strokeStyle = "rgba(245, 158, 11, 0.8)";
+      drawCtx.lineWidth = 3;
+      drawCtx.setLineDash([8, 4]);
+      drawCtx.strokeRect(x, y, w, h);
+      drawCtx.fillStyle = "rgba(245, 158, 11, 0.1)";
+      drawCtx.fillRect(x, y, w, h);
+      drawCtx.setLineDash([]);
+    }
+
+    async function onUp(e: MouseEvent) {
+      if (!isDrawing) return;
+      isDrawing = false;
+      const coords = getCoords(e);
+      const x = Math.round(Math.min(startX, coords.x));
+      const y = Math.round(Math.min(startY, coords.y));
+      const w = Math.round(Math.abs(coords.x - startX));
+      const h = Math.round(Math.abs(coords.y - startY));
+      const drawCtx = canvas.getContext("2d");
+      if (drawCtx) drawCtx.clearRect(0, 0, canvas.width, canvas.height);
+      if (w < 10 || h < 10) return;
+      if (!manga || !chapter) return;
+      const toastId = toast.loading("OCR...");
+      try {
+        const res = await api.ocrBbox(manga, chapter, currentPage, { x, y, w, h });
+        toast.success(res.text ? `OCR: "${res.text.slice(0, 60)}"` : "Matn topilmadi", { id: toastId });
+        const updated = await api.getResults(manga, chapter);
+        setData(updated);
+      } catch (err) {
+        toast.error(`OCR xatolik: ${(err as Error).message}`, { id: toastId });
+      }
+      setOcrMode(false);
+    }
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOcrMode(false);
+    }
+
+    canvas.addEventListener("mousedown", onDown);
+    canvas.addEventListener("mousemove", onMove);
+    canvas.addEventListener("mouseup", onUp);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      canvas.removeEventListener("mousedown", onDown);
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mouseup", onUp);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [ocrMode, manga, chapter, currentPage]);
 
   /* ── Line clean mode (rectangle inpaint) ── */
   useEffect(() => {
@@ -708,7 +810,7 @@ export default function ResultsPage() {
 
   /* ── Resize mode (default — no special mode active) ── */
   useEffect(() => {
-    if (drawingMode || cleanMode || lineCleanMode || bubbleMode) return;
+    if (drawingMode || cleanMode || lineCleanMode || ocrMode || bubbleMode) return;
     const cleanImg = cleanImgRef.current;
     const drawCanvas = drawCanvasRef.current;
     if (!cleanImg || !drawCanvas) return;
@@ -970,7 +1072,7 @@ export default function ResultsPage() {
       cleanImg.removeEventListener("load", syncSize);
       canvas.style.cursor = "";
     };
-  }, [drawingMode, cleanMode, lineCleanMode, bubbleMode, manga, chapter, currentPage, pages, setRegionDrafts]);
+  }, [drawingMode, cleanMode, lineCleanMode, ocrMode, bubbleMode, manga, chapter, currentPage, pages, setRegionDrafts]);
 
   /* ── Scroll sync ── */
   useEffect(() => {
@@ -1031,7 +1133,7 @@ export default function ResultsPage() {
     function onKey(e: KeyboardEvent) {
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-      if (drawingMode || cleanMode || lineCleanMode || bubbleMode) return;
+      if (drawingMode || cleanMode || lineCleanMode || ocrMode || bubbleMode) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         setCurrentPage(Math.max(0, currentPage - 1));
@@ -1042,7 +1144,7 @@ export default function ResultsPage() {
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [currentPage, pages.length, drawingMode, cleanMode, lineCleanMode, bubbleMode, setCurrentPage]);
+  }, [currentPage, pages.length, drawingMode, cleanMode, lineCleanMode, ocrMode, bubbleMode, setCurrentPage]);
 
   const handleUndoClean = useCallback(async () => {
     if (!manga || !chapter) return;
@@ -1113,6 +1215,79 @@ export default function ResultsPage() {
     }
   }, [manga, chapter, executeRerunOcr]);
 
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    if (!data || !manga || !chapter) return;
+    const exportPages = data.pages.filter((p) => p.cleaned_image_url);
+    if (exportPages.length === 0) {
+      toast.error("Export uchun tozalangan sahifalar yo'q");
+      return;
+    }
+    setExporting(true);
+    try {
+      for (let i = 0; i < exportPages.length; i++) {
+        const page = exportPages[i];
+        toast.loading(`Export: ${i + 1}/${exportPages.length}...`, { id: "export-progress" });
+        const canvas = await renderPageForExport(page.cleaned_image_url!, page.regions || []);
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("Blob yaratib bo'lmadi"))),
+            "image/png",
+          );
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const pageNum = String(data.pages.indexOf(page) + 1).padStart(3, "0");
+        a.download = `${manga}_${chapter}_${pageNum}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        // Browserga har bir download orasida vaqt berish
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      toast.success(`${exportPages.length} sahifa export qilindi`, { id: "export-progress" });
+    } catch (e) {
+      const err = e as Error;
+      toast.error(`Export xatolik: ${err.message}`, { id: "export-progress" });
+    } finally {
+      setExporting(false);
+    }
+  }, [data, manga, chapter]);
+
+  const handleExportCurrentPage = useCallback(async () => {
+    if (!data || !manga || !chapter) return;
+    const page = data.pages[currentPage];
+    if (!page?.cleaned_image_url) {
+      toast.error("Bu sahifada tozalangan rasm yo'q");
+      return;
+    }
+    setExporting(true);
+    try {
+      toast.loading("Export qilinmoqda...", { id: "export-progress" });
+      const canvas = await renderPageForExport(page.cleaned_image_url, page.regions || []);
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("Blob yaratib bo'lmadi"))),
+          "image/png",
+        );
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const pageNum = String(currentPage + 1).padStart(3, "0");
+      a.download = `${manga}_${chapter}_${pageNum}.png`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Sahifa export qilindi", { id: "export-progress" });
+    } catch (e) {
+      const err = e as Error;
+      toast.error(`Export xatolik: ${err.message}`, { id: "export-progress" });
+    } finally {
+      setExporting(false);
+    }
+  }, [data, manga, chapter, currentPage]);
+
   const handleTranslateConfirm = useCallback(async () => {
     if (!manga || !chapter) return;
     setConfirmTranslate(false);
@@ -1165,47 +1340,59 @@ export default function ResultsPage() {
         currentPage={currentPage}
         totalPages={totalPages}
         translating={translating}
-        drawingMode={drawingMode}
-        cleanMode={cleanMode}
-        lineCleanMode={lineCleanMode}
-        bubbleMode={bubbleMode}
-        pageHasClean={pageHasClean}
         confirmTranslate={confirmTranslate}
-        brushSize={brushSize}
+        runInfo={runInfo}
         setCurrentPage={setCurrentPage}
         setTranslating={setTranslating}
-        setDrawingMode={(v) => {
-          const next = typeof v === "function" ? v(drawingMode) : v;
-          setDrawingMode(next);
-          if (next) { setCleanMode(false); setLineCleanMode(false); setBubbleMode(null); }
-        }}
-        setCleanMode={(v) => {
-          const next = typeof v === "function" ? v(cleanMode) : v;
-          setCleanMode(next);
-          if (next) { setDrawingMode(false); setLineCleanMode(false); setBubbleMode(null); }
-        }}
-        setLineCleanMode={(v) => {
-          const next = typeof v === "function" ? v(lineCleanMode) : v;
-          setLineCleanMode(next);
-          if (next) { setDrawingMode(false); setCleanMode(false); setBubbleMode(null); }
-        }}
-        setBubbleMode={(v) => {
-          setBubbleMode(v);
-          if (v) { setDrawingMode(false); setCleanMode(false); setLineCleanMode(false); }
-        }}
-        setBrushSize={setBrushSize}
         setConfirmTranslate={setConfirmTranslate}
         setReadingOpen={setReadingOpen}
         onTranslateConfirm={handleTranslateConfirm}
         onRerunOcr={handleRerunOcr}
-        onUndoClean={handleUndoClean}
+        onExport={handleExport}
+        onExportPage={handleExportCurrentPage}
+        onRunInfoOpen={() => setRunInfoOpen(true)}
+        exporting={exporting}
         pagesCount={pages.length}
       />
 
-      <RunInfoPanel manga={manga!} chapter={chapter!} />
+      {/* Sidebar + panels layout */}
+      <div className="grid min-h-0 flex-1 gap-2 lg:grid-cols-[40px_1fr_1fr_340px]">
+        <ActionSidebar
+          drawingMode={drawingMode}
+          cleanMode={cleanMode}
+          lineCleanMode={lineCleanMode}
+          ocrMode={ocrMode}
+          bubbleMode={bubbleMode}
+          pageHasClean={pageHasClean}
+          brushSize={brushSize}
+          setDrawingMode={(v) => {
+            const next = typeof v === "function" ? v(drawingMode) : v;
+            setDrawingMode(next);
+            if (next) { setCleanMode(false); setLineCleanMode(false); setOcrMode(false); setBubbleMode(null); }
+          }}
+          setCleanMode={(v) => {
+            const next = typeof v === "function" ? v(cleanMode) : v;
+            setCleanMode(next);
+            if (next) { setDrawingMode(false); setLineCleanMode(false); setOcrMode(false); setBubbleMode(null); }
+          }}
+          setLineCleanMode={(v) => {
+            const next = typeof v === "function" ? v(lineCleanMode) : v;
+            setLineCleanMode(next);
+            if (next) { setDrawingMode(false); setCleanMode(false); setOcrMode(false); setBubbleMode(null); }
+          }}
+          setOcrMode={(v) => {
+            const next = typeof v === "function" ? v(ocrMode) : v;
+            setOcrMode(next);
+            if (next) { setDrawingMode(false); setCleanMode(false); setLineCleanMode(false); setBubbleMode(null); }
+          }}
+          setBubbleMode={(v) => {
+            setBubbleMode(v);
+            if (v) { setDrawingMode(false); setCleanMode(false); setLineCleanMode(false); setOcrMode(false); }
+          }}
+          setBrushSize={setBrushSize}
+          onUndoClean={handleUndoClean}
+        />
 
-      {/* Three-column layout */}
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[1fr_1fr_280px]">
         <ImagePanel
           label="Original"
           imgRef={originalImgRef}
@@ -1213,7 +1400,17 @@ export default function ResultsPage() {
           wrapRef={originalWrapRef}
           imgSrc={page.image_url}
           imgAlt="Original"
-        />
+        >
+          <canvas
+            ref={ocrCanvasRef}
+            className={`absolute inset-0 ${ocrMode ? "cursor-crosshair" : "pointer-events-none"}`}
+          />
+          {ocrMode && (
+            <div className="absolute bottom-2 left-2 rounded-md bg-amber-900/80 px-2.5 py-1 text-[11px] text-white backdrop-blur">
+              Matn joyini belgilang · OCR avtomatik ishlaydi · Esc - bekor
+            </div>
+          )}
+        </ImagePanel>
 
         <ImagePanel
           label="Tarjima"
@@ -1248,6 +1445,9 @@ export default function ResultsPage() {
       </div>
 
       <ReadingOverlay pages={pages} open={readingOpen} onClose={() => setReadingOpen(false)} />
+      {runInfoOpen && runInfo && (runInfo.ocr_run || runInfo.translate_run) && (
+        <RunInfoModal info={runInfo} onClose={() => setRunInfoOpen(false)} />
+      )}
       <RerunOcrModal
         open={rerunModalOpen}
         settings={rerunSettings}

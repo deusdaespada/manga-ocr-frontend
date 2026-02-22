@@ -133,6 +133,7 @@ export type Region = {
   font_size?: number;
   rotation?: number;
   font_weight?: string;
+  font_style?: string;
   font_color?: string;
   font_family?: string;
 };

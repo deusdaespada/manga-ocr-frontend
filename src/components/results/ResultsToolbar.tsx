@@ -3,21 +3,15 @@ import {
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
-  Circle,
-  Eraser,
-  Minus,
+  Clock,
+  Download,
   Pencil,
-  Plus,
-  Square,
-  X,
   Languages,
   BookOpen,
   RotateCcw,
-  RectangleHorizontal,
-  Undo2,
 } from "lucide-react";
 
-import type { ResultsData } from "../../lib/types";
+import type { ResultsData, RunInfo } from "../../lib/types";
 import { Button } from "../ui/button";
 
 function formatCost(data: ResultsData): string | null {
@@ -38,25 +32,18 @@ interface ResultsToolbarProps {
   currentPage: number;
   totalPages: number;
   translating: boolean;
-  drawingMode: boolean;
-  cleanMode: boolean;
-  lineCleanMode: boolean;
-  bubbleMode: "rect" | "oval" | null;
-  pageHasClean: boolean;
   confirmTranslate: boolean;
-  brushSize: number;
+  runInfo: RunInfo | null;
   setCurrentPage: (page: number) => void;
   setTranslating: (v: boolean) => void;
-  setDrawingMode: (v: boolean | ((prev: boolean) => boolean)) => void;
-  setCleanMode: (v: boolean | ((prev: boolean) => boolean)) => void;
-  setLineCleanMode: (v: boolean | ((prev: boolean) => boolean)) => void;
-  setBubbleMode: (v: "rect" | "oval" | null) => void;
-  setBrushSize: (v: number) => void;
   setConfirmTranslate: (v: boolean) => void;
   setReadingOpen: (v: boolean) => void;
   onTranslateConfirm: () => void;
   onRerunOcr: () => void;
-  onUndoClean: () => void;
+  onExport: () => void;
+  onExportPage: () => void;
+  onRunInfoOpen: () => void;
+  exporting: boolean;
   pagesCount: number;
 }
 
@@ -67,27 +54,21 @@ export default function ResultsToolbar({
   currentPage,
   totalPages,
   translating,
-  drawingMode,
-  cleanMode,
-  lineCleanMode,
-  bubbleMode,
-  pageHasClean,
   confirmTranslate,
+  runInfo,
   setCurrentPage,
-  brushSize,
-  setDrawingMode,
-  setCleanMode,
-  setLineCleanMode,
-  setBubbleMode,
-  setBrushSize,
   setConfirmTranslate,
   setReadingOpen,
   onTranslateConfirm,
   onRerunOcr,
-  onUndoClean,
+  onExport,
+  onExportPage,
+  onRunInfoOpen,
+  exporting,
   pagesCount,
 }: ResultsToolbarProps) {
   const costText = formatCost(data);
+  const hasRunInfo = runInfo && (runInfo.ocr_run || runInfo.translate_run);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -170,108 +151,53 @@ export default function ResultsToolbar({
         <BookOpen className="h-3 w-3" />
         O'qish
       </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 gap-1 text-xs"
+        disabled={exporting}
+        onClick={onExportPage}
+        title="Joriy sahifani PNG export"
+      >
+        <Download className="h-3 w-3" />
+        {exporting ? "..." : "Sahifa"}
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-7 gap-1 text-xs border-primary/40 text-primary hover:bg-primary/10"
+        disabled={exporting}
+        onClick={onExport}
+        title="Barcha sahifalarni PNG export"
+      >
+        <Download className="h-3 w-3" />
+        {exporting ? "..." : "Hammasi"}
+      </Button>
       <Link to={`/edit/${manga}/${chapter}`}>
         <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
           <Pencil className="h-3 w-3" />
           Tahrir
         </Button>
       </Link>
-      <Button
-        variant={drawingMode ? "destructive" : "outline"}
-        size="sm"
-        className="h-7 gap-1 text-xs"
-        onClick={() => setDrawingMode((prev: boolean) => !prev)}
-      >
-        {drawingMode ? (
-          <><X className="h-3 w-3" />Bekor</>
-        ) : (
-          <><Plus className="h-3 w-3" />Region</>
-        )}
-      </Button>
-      <Button
-        variant={cleanMode ? "destructive" : "outline"}
-        size="sm"
-        className="h-7 gap-1 text-xs"
-        onClick={() => setCleanMode((prev: boolean) => !prev)}
-      >
-        {cleanMode ? (
-          <><X className="h-3 w-3" />Bekor</>
-        ) : (
-          <><Eraser className="h-3 w-3" />Tozalash</>
-        )}
-      </Button>
-      <Button
-        variant={lineCleanMode ? "destructive" : "outline"}
-        size="sm"
-        className="h-7 gap-1 text-xs"
-        onClick={() => setLineCleanMode((prev: boolean) => !prev)}
-      >
-        {lineCleanMode ? (
-          <><X className="h-3 w-3" />Bekor</>
-        ) : (
-          <><RectangleHorizontal className="h-3 w-3" />Chiziq</>
-        )}
-      </Button>
-      <Button
-        variant={bubbleMode === "rect" ? "destructive" : "outline"}
-        size="sm"
-        className="h-7 gap-1 text-xs"
-        onClick={() => setBubbleMode(bubbleMode === "rect" ? null : "rect")}
-      >
-        {bubbleMode === "rect" ? (
-          <><X className="h-3 w-3" />Bekor</>
-        ) : (
-          <><Square className="h-3 w-3" />To'rtburchak</>
-        )}
-      </Button>
-      <Button
-        variant={bubbleMode === "oval" ? "destructive" : "outline"}
-        size="sm"
-        className="h-7 gap-1 text-xs"
-        onClick={() => setBubbleMode(bubbleMode === "oval" ? null : "oval")}
-      >
-        {bubbleMode === "oval" ? (
-          <><X className="h-3 w-3" />Bekor</>
-        ) : (
-          <><Circle className="h-3 w-3" />Dumaloq</>
-        )}
-      </Button>
-      {cleanMode && (
-        <div className="flex items-center gap-1 rounded-md border border-border bg-card px-1.5 py-0.5">
-          <button
-            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-            onClick={() => setBrushSize(Math.max(5, brushSize - 5))}
-          >
-            <Minus className="h-3 w-3" />
-          </button>
-          <span className="min-w-[32px] text-center text-[11px] tabular-nums">{brushSize}px</span>
-          <button
-            className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent"
-            onClick={() => setBrushSize(Math.min(100, brushSize + 5))}
-          >
-            <Plus className="h-3 w-3" />
-          </button>
-        </div>
-      )}
-      {pageHasClean && (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 gap-1 text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
-          onClick={onUndoClean}
-        >
-          <Undo2 className="h-3 w-3" />
-          Qaytarish
-        </Button>
-      )}
 
-      {/* Cost — right side */}
-      {costText && (
-        <>
-          <div className="flex-1" />
+      {/* Right side: Run info + Cost */}
+      <div className="flex-1" />
+      <div className="flex items-center gap-2">
+        {hasRunInfo && (
+          <button
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            onClick={onRunInfoOpen}
+            title="Run ma'lumotlari"
+          >
+            <Clock className="h-3 w-3" />
+            Info
+          </button>
+        )}
+        {costText && hasRunInfo && <div className="h-3 w-px bg-border" />}
+        {costText && (
           <span className="mono text-[11px] text-muted-foreground">{costText}</span>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

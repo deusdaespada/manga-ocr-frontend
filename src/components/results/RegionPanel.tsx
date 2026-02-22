@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { api } from "../../lib/api";
 import type { Region, ResultsData } from "../../lib/types";
+import { getFontsByCategory, getFontEntry } from "../../lib/fonts";
 
 export type RegionDraft = {
   original: string;
@@ -11,6 +12,7 @@ export type RegionDraft = {
   fontSize?: number;
   rotation?: number;
   fontWeight?: string;
+  fontStyle?: string;
   fontColor?: string;
   fontFamily?: string;
   status?: string;
@@ -27,6 +29,8 @@ interface RegionPanelProps {
   chapter: string;
   onDataUpdate: (data: ResultsData) => void;
 }
+
+const fontsByCategory = getFontsByCategory();
 
 export default function RegionPanel({
   regions,
@@ -166,16 +170,20 @@ export default function RegionPanel({
             const draftRotation = draft.rotation ?? serverRotation;
             const serverFontWeight = r.font_weight || "bold";
             const draftFontWeight = draft.fontWeight ?? serverFontWeight;
+            const serverFontStyle = r.font_style || "normal";
+            const draftFontStyle = draft.fontStyle ?? serverFontStyle;
             const serverFontColor = r.font_color || "#111827";
             const draftFontColor = draft.fontColor ?? serverFontColor;
             const serverFontFamily = r.font_family || "Comic Neue";
             const draftFontFamily = draft.fontFamily ?? serverFontFamily;
+            const fontInfo = getFontEntry(draftFontFamily);
             const isDirty =
               draft.original !== (r.original_text || "") ||
               draft.translation !== (r.uz_text || "") ||
               draftFontSize !== serverFontSize ||
               draftRotation !== serverRotation ||
               draftFontWeight !== serverFontWeight ||
+              draftFontStyle !== serverFontStyle ||
               draftFontColor !== serverFontColor ||
               draftFontFamily !== serverFontFamily;
             return (
@@ -255,9 +263,9 @@ export default function RegionPanel({
                       }))
                     }
                   />
-                  {/* Font size control */}
+                  {/* Font size + Rotation — bitta qatorda */}
                   <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-muted-foreground w-6">Aa</span>
+                    <span className="text-[10px] text-muted-foreground w-4">Aa</span>
                     <button
                       className="flex h-5 w-5 items-center justify-center rounded border bg-background text-muted-foreground transition-colors hover:text-foreground"
                       onClick={() =>
@@ -270,7 +278,7 @@ export default function RegionPanel({
                     >
                       <Minus className="h-2.5 w-2.5" />
                     </button>
-                    <span className="min-w-[28px] text-center text-[11px] tabular-nums">
+                    <span className="min-w-[24px] text-center text-[10px] tabular-nums">
                       {draftFontSize || "auto"}
                     </span>
                     <button
@@ -287,7 +295,7 @@ export default function RegionPanel({
                     </button>
                     {draftFontSize > 0 && (
                       <button
-                        className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+                        className="flex h-4 w-4 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
                         title="Auto"
                         onClick={() =>
                           setRegionDrafts((prev) => ({
@@ -296,15 +304,13 @@ export default function RegionPanel({
                           }))
                         }
                       >
-                        <RotateCcw className="h-2.5 w-2.5" />
+                        <RotateCcw className="h-2 w-2" />
                       </button>
                     )}
-                  </div>
-                  {/* Rotation control */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-muted-foreground w-6">
-                      <RotateCw className="h-2.5 w-2.5" />
-                    </span>
+
+                    <div className="mx-0.5 h-3 w-px bg-border" />
+
+                    <RotateCw className="h-2.5 w-2.5 text-muted-foreground" />
                     <button
                       className="flex h-5 w-5 items-center justify-center rounded border bg-background text-muted-foreground transition-colors hover:text-foreground"
                       onClick={() =>
@@ -316,7 +322,7 @@ export default function RegionPanel({
                     >
                       <Minus className="h-2.5 w-2.5" />
                     </button>
-                    <span className="min-w-[28px] text-center text-[11px] tabular-nums">
+                    <span className="min-w-[22px] text-center text-[10px] tabular-nums">
                       {draftRotation}°
                     </span>
                     <button
@@ -332,7 +338,7 @@ export default function RegionPanel({
                     </button>
                     {draftRotation !== 0 && (
                       <button
-                        className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+                        className="flex h-4 w-4 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
                         title="0°"
                         onClick={() =>
                           setRegionDrafts((prev) => ({
@@ -341,14 +347,15 @@ export default function RegionPanel({
                           }))
                         }
                       >
-                        <RotateCcw className="h-2.5 w-2.5" />
+                        <RotateCcw className="h-2 w-2" />
                       </button>
                     )}
                   </div>
                   {/* Font formatting controls */}
                   <div className="flex items-center gap-1.5">
                     <button
-                      className={`h-5 rounded border px-1.5 text-[10px] font-medium transition-colors ${draftFontWeight === "bold" ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"}`}
+                      className={`h-5 rounded border px-1.5 text-[10px] font-bold transition-colors ${draftFontWeight === "bold" ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"}`}
+                      title={draftFontWeight === "bold" ? "Oddiy qilish" : "Qalin qilish"}
                       onClick={() =>
                         setRegionDrafts((prev) => ({
                           ...prev,
@@ -356,7 +363,21 @@ export default function RegionPanel({
                         }))
                       }
                     >
-                      {draftFontWeight === "bold" ? "Qalin" : "Oddiy"}
+                      B
+                    </button>
+                    <button
+                      className={`h-5 rounded border px-1.5 text-[10px] transition-colors ${draftFontStyle === "italic" ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"} ${fontInfo && !fontInfo.hasItalic ? "opacity-40 cursor-not-allowed" : ""}`}
+                      title={draftFontStyle === "italic" ? "Oddiy qilish" : "Kursiv qilish"}
+                      style={{ fontStyle: "italic" }}
+                      onClick={() => {
+                        if (fontInfo && !fontInfo.hasItalic) return;
+                        setRegionDrafts((prev) => ({
+                          ...prev,
+                          [key]: { ...draft, fontStyle: draftFontStyle === "italic" ? "normal" : "italic", status: undefined },
+                        }));
+                      }}
+                    >
+                      I
                     </button>
                     <input
                       type="color"
@@ -370,7 +391,7 @@ export default function RegionPanel({
                       }
                     />
                     <select
-                      className="h-5 rounded border bg-background px-1 text-[10px] text-foreground"
+                      className="h-5 max-w-[120px] flex-1 rounded border bg-background px-1 text-[10px] text-foreground"
                       value={draftFontFamily}
                       onChange={(e) =>
                         setRegionDrafts((prev) => ({
@@ -379,10 +400,15 @@ export default function RegionPanel({
                         }))
                       }
                     >
-                      <option value="Comic Neue">Comic Neue</option>
-                      <option value="Comic Sans MS">Comic Sans</option>
-                      <option value="Arial">Arial</option>
-                      <option value="serif">Serif</option>
+                      {Object.entries(fontsByCategory).map(([category, fonts]) => (
+                        <optgroup key={category} label={category}>
+                          {fonts.map((f) => (
+                            <option key={f.family} value={f.family}>
+                              {f.family}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   {/* Save — only visible when dirty */}
@@ -409,6 +435,9 @@ export default function RegionPanel({
                               }
                               if (draftFontWeight !== serverFontWeight) {
                                 payload.font_weight = draftFontWeight;
+                              }
+                              if (draftFontStyle !== serverFontStyle) {
+                                payload.font_style = draftFontStyle;
                               }
                               if (draftFontColor !== serverFontColor) {
                                 payload.font_color = draftFontColor;

@@ -196,6 +196,13 @@ export const api = {
       body: JSON.stringify({ page_idx: pageIdx, region_idx: regionIdx, backend: "openai" }),
     }).then(handle<{ ok: boolean; text: string }>);
   },
+  ocrBbox(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }): Promise<{ ok: boolean; region_idx: number; text: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/ocr-bbox/${pageIdx}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bbox }),
+    }).then(handle<{ ok: boolean; region_idx: number; text: string }>);
+  },
   retranslateRegions(manga: string, chapter: string, payload: RetranslateRequest): Promise<RetranslateResponse> {
     return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/retranslate`, {
       method: "POST",

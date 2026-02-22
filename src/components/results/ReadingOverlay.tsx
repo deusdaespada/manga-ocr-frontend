@@ -30,22 +30,30 @@ export default function ReadingOverlay({ pages, open, onClose }: ReadingOverlayP
 
   useEffect(() => {
     if (!open) return;
-    const readingPages = pages.filter((p) => p.cleaned_image_url);
-    readingPages.forEach((page, idx) => {
-      const canvas = canvasRefs.current[idx];
-      if (!canvas || !page.cleaned_image_url) return;
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.drawImage(img, 0, 0);
-        drawTranslatedTexts(ctx, page.regions || []);
-      };
-      img.src = page.cleaned_image_url;
-    });
+
+    async function render() {
+      // Fontlar yuklangandan keyin chizish
+      await document.fonts.ready;
+
+      const readingPages = pages.filter((p) => p.cleaned_image_url);
+      readingPages.forEach((page, idx) => {
+        const canvas = canvasRefs.current[idx];
+        if (!canvas || !page.cleaned_image_url) return;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return;
+          ctx.drawImage(img, 0, 0);
+          drawTranslatedTexts(ctx, page.regions || []);
+        };
+        img.src = page.cleaned_image_url;
+      });
+    }
+
+    render();
   }, [open, pages]);
 
   if (!open) return null;

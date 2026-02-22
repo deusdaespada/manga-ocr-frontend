@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, ChevronRight, Clock, Settings2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Settings2, X } from "lucide-react";
 
 import { api } from "../../lib/api";
 import type { RunEntry, RunInfo } from "../../lib/types";
+import { Button } from "../ui/button";
 
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec.toFixed(1)}s`;
@@ -24,7 +25,7 @@ function StepRow({ name, elapsed, detail }: { name: string; elapsed: number; det
 }
 
 function RunSection({ label, entry }: { label: string; entry: RunEntry }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const steps = entry.steps || {};
   const cfg = entry.config || {};
 
@@ -87,12 +88,55 @@ interface RunInfoPanelProps {
   chapter: string;
 }
 
-export default function RunInfoPanel({ manga, chapter }: RunInfoPanelProps) {
+export function useRunInfo(manga: string, chapter: string) {
   const [info, setInfo] = useState<RunInfo | null>(null);
 
   useEffect(() => {
     api.getRunInfo(manga, chapter).then(setInfo).catch(() => setInfo(null));
   }, [manga, chapter]);
+
+  return info;
+}
+
+export function RunInfoModal({ info, onClose }: { info: RunInfo; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      <div className="flex justify-center pt-12">
+        <div
+          className="relative w-full max-w-sm rounded-lg border bg-card p-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            onClick={onClose}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+          <div className="mb-2 flex items-center gap-2 text-xs font-medium">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            Run Info
+          </div>
+          <div className="space-y-2">
+            {info.ocr_run && <RunSection label="OCR" entry={info.ocr_run} />}
+            {info.translate_run && <RunSection label="Tarjima" entry={info.translate_run} />}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Legacy export — endi ishlatilmaydi, lekin backward compat uchun
+export default function RunInfoPanel({ manga, chapter }: RunInfoPanelProps) {
+  const info = useRunInfo(manga, chapter);
 
   if (!info) return null;
   if (!info.ocr_run && !info.translate_run) return null;
