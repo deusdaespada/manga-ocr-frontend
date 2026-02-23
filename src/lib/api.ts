@@ -1,7 +1,9 @@
 import type {
+  AutomationInfo,
   GenreOption,
   JobInfo,
   JobStartResponse,
+  MangaAutomation,
   OcrBackendInfo,
   Project,
   ProjectCreateRequest,
@@ -170,12 +172,24 @@ export const api = {
       body: JSON.stringify({ mask: maskBase64 }),
     }).then(handle<{ ok: boolean; image_url: string }>);
   },
-  drawBubble(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }, shape: "rect" | "oval"): Promise<{ ok: boolean; image_url: string }> {
+  drawBubble(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }, shape: "rect" | "oval", color?: string): Promise<{ ok: boolean; image_url: string }> {
     return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/draw-bubble/${pageIdx}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bbox, shape }),
+      body: JSON.stringify({ bbox, shape, color }),
     }).then(handle<{ ok: boolean; image_url: string }>);
+  },
+  paintOverlay(manga: string, chapter: string, pageIdx: number, imageBase64: string): Promise<{ ok: boolean; image_url: string }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/paint/${pageIdx}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: imageBase64 }),
+    }).then(handle<{ ok: boolean; image_url: string }>);
+  },
+  pickColor(manga: string, chapter: string, pageIdx: number, x: number, y: number): Promise<{ ok: boolean; color: string; rgb: number[] }> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/pick-color/${pageIdx}?x=${Math.round(x)}&y=${Math.round(y)}`).then(
+      handle<{ ok: boolean; color: string; rgb: number[] }>
+    );
   },
   undoClean(manga: string, chapter: string, pageIdx: number): Promise<{ ok: boolean; image_url: string }> {
     return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/clean-undo/${pageIdx}`, {
@@ -196,12 +210,12 @@ export const api = {
       body: JSON.stringify({ page_idx: pageIdx, region_idx: regionIdx, backend: "openai" }),
     }).then(handle<{ ok: boolean; text: string }>);
   },
-  ocrBbox(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }): Promise<{ ok: boolean; region_idx: number; text: string }> {
+  ocrBbox(manga: string, chapter: string, pageIdx: number, bbox: { x: number; y: number; w: number; h: number }): Promise<{ ok: boolean; region_idx: number; text: string; uz_text?: string }> {
     return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/ocr-bbox/${pageIdx}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bbox }),
-    }).then(handle<{ ok: boolean; region_idx: number; text: string }>);
+    }).then(handle<{ ok: boolean; region_idx: number; text: string; uz_text?: string }>);
   },
   retranslateRegions(manga: string, chapter: string, payload: RetranslateRequest): Promise<RetranslateResponse> {
     return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/retranslate`, {
@@ -209,5 +223,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }).then(handle<RetranslateResponse>);
+  },
+  getChapterAutomation(manga: string, chapter: string): Promise<AutomationInfo> {
+    return fetch(`/api/results/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/automation`).then(
+      handle<AutomationInfo>
+    );
+  },
+  getMangaAutomation(manga: string): Promise<MangaAutomation> {
+    return fetch(`/api/projects/${encodeURIComponent(manga)}/automation`).then(
+      handle<MangaAutomation>
+    );
   },
 };

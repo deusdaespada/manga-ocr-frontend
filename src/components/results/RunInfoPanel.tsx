@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Clock, Settings2, X } from "lucide-react";
 
 import { api } from "../../lib/api";
 import type { RunEntry, RunInfo } from "../../lib/types";
-import { Button } from "../ui/button";
+
 
 function formatDuration(sec: number): string {
   if (sec < 60) return `${sec.toFixed(1)}s`;

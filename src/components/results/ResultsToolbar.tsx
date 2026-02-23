@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Clock,
   Download,
+  Loader2,
   Pencil,
   Languages,
   BookOpen,
@@ -44,6 +45,7 @@ interface ResultsToolbarProps {
   onExportPage: () => void;
   onRunInfoOpen: () => void;
   exporting: boolean;
+  rerunLoading: boolean;
   pagesCount: number;
 }
 
@@ -65,6 +67,7 @@ export default function ResultsToolbar({
   onExportPage,
   onRunInfoOpen,
   exporting,
+  rerunLoading,
   pagesCount,
 }: ResultsToolbarProps) {
   const costText = formatCost(data);
@@ -136,12 +139,12 @@ export default function ResultsToolbar({
           disabled={translating}
           onClick={() => setConfirmTranslate(true)}
         >
-          <Languages className="h-3 w-3" />
-          {translating ? "..." : data?.translated ? "Qayta tarjima" : "Tarjima"}
+          {translating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
+          {data?.translated ? "Qayta tarjima" : "Tarjima"}
         </Button>
       )}
-      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={onRerunOcr}>
-        <RotateCcw className="h-3 w-3" />
+      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={rerunLoading} onClick={onRerunOcr}>
+        {rerunLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
         Qayta OCR
       </Button>
       <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setCurrentPage(pagesCount)}>
@@ -159,8 +162,8 @@ export default function ResultsToolbar({
         onClick={onExportPage}
         title="Joriy sahifani PNG export"
       >
-        <Download className="h-3 w-3" />
-        {exporting ? "..." : "Sahifa"}
+        {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+        Sahifa
       </Button>
       <Button
         size="sm"
@@ -170,8 +173,8 @@ export default function ResultsToolbar({
         onClick={onExport}
         title="Barcha sahifalarni PNG export"
       >
-        <Download className="h-3 w-3" />
-        {exporting ? "..." : "Hammasi"}
+        {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Download className="h-3 w-3" />}
+        Hammasi
       </Button>
       <Link to={`/edit/${manga}/${chapter}`}>
         <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
@@ -180,9 +183,26 @@ export default function ResultsToolbar({
         </Button>
       </Link>
 
-      {/* Right side: Run info + Cost */}
+      {/* Right side: Automation + Run info + Cost */}
       <div className="flex-1" />
       <div className="flex items-center gap-2">
+        {data.automation && data.automation.score > 0 && (
+          <span
+            className={`text-[11px] font-medium tabular-nums ${
+              data.automation.score >= 80
+                ? "text-emerald-400"
+                : data.automation.score >= 40
+                  ? "text-amber-400"
+                  : "text-zinc-400"
+            }`}
+            title={`Auto: ${data.automation.has_batch_ocr ? "OCR" : ""}${data.automation.has_batch_ocr && data.automation.has_batch_translate ? "+" : ""}${data.automation.has_batch_translate ? "Tarjima" : ""} · Qo'lda: ${data.automation.manual_action_count}`}
+          >
+            {data.automation.score.toFixed(0)}% auto
+          </span>
+        )}
+        {data.automation && data.automation.score > 0 && (hasRunInfo || costText) && (
+          <div className="h-3 w-px bg-border" />
+        )}
         {hasRunInfo && (
           <button
             className="inline-flex items-center gap-1 text-[11px] text-muted-foreground transition-colors hover:text-foreground"

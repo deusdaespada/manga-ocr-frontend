@@ -11,6 +11,7 @@ export type Chapter = {
   image_count: number;
   status: ChapterStatus;
   job_id?: string | null;
+  automation_score?: number;
 };
 
 export type ProjectMetadata = {
@@ -31,6 +32,7 @@ export type Project = {
   created_at?: string;
   settings?: ProjectSettings;
   metadata?: ProjectMetadata;
+  automation_avg?: number;
 };
 
 export type ProjectCreateRequest = {
@@ -44,7 +46,7 @@ export type ProjectCreateRequest = {
   tags?: string[];
   language?: "ja" | "ko" | "ru" | "en";
   backend?: "openai" | "ollama" | "gemini";
-  ocr_backend?: "auto" | "openai" | "ollama" | "paddle";
+  ocr_backend?: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence";
   cleaner_backend?: CleanerBackendValue;
   translator_model?: string;
   limit?: number;
@@ -76,7 +78,7 @@ export type CleanerBackendValue = "pcleaner" | "lama";
 export type ProjectSettings = {
   language: "ja" | "ko" | "ru" | "en";
   backend: "openai" | "ollama" | "gemini";
-  ocr_backend: "auto" | "openai" | "ollama" | "paddle";
+  ocr_backend: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence";
   cleaner_backend: CleanerBackendValue;
   translator_model: string;
   limit: number;
@@ -136,6 +138,8 @@ export type Region = {
   font_style?: string;
   font_color?: string;
   font_family?: string;
+  font_stroke_color?: string;
+  font_stroke_width?: number;
 };
 
 export type Page = {
@@ -153,11 +157,25 @@ export type UsageInfo = {
   requests?: number;
 };
 
+export type AutomationInfo = {
+  score: number;
+  has_batch_ocr: boolean;
+  has_batch_translate: boolean;
+  manual_action_count: number;
+  total_regions: number;
+};
+
+export type MangaAutomation = {
+  average_score: number;
+  chapters: Record<string, number>;
+};
+
 export type ResultsData = {
   pages: Page[];
   translated?: boolean;
   ocr_usage?: UsageInfo;
   translator_usage?: UsageInfo;
+  automation?: AutomationInfo;
 };
 
 export type StepTiming = {

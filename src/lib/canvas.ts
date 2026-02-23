@@ -98,9 +98,25 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     ctx.rect(r.bbox.x, r.bbox.y, boxWidth, boxHeight);
     ctx.clip();
     const fontColor = r.font_color || "#111827";
+    const strokeColor = r.font_stroke_color || "";
+    const strokeWidth = r.font_stroke_width || 0;
+    const centerX = r.bbox.x + boxWidth / 2;
+
+    // Stroke (hoshiya) — matn chekkasi
+    if (strokeColor && strokeWidth > 0) {
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeWidth * 2;
+      ctx.lineJoin = "round";
+      ctx.miterLimit = 2;
+      lines.forEach((line, idx) => {
+        ctx.strokeText(line, centerX, startY + idx * lineHeight);
+      });
+    }
+
+    // Fill — asosiy matn rangi
     ctx.fillStyle = fontColor.startsWith("#") ? fontColor : `rgba(17, 24, 39, 0.92)`;
     lines.forEach((line, idx) => {
-      ctx.fillText(line, r.bbox.x + boxWidth / 2, startY + idx * lineHeight);
+      ctx.fillText(line, centerX, startY + idx * lineHeight);
     });
     ctx.restore();
   });

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Play, Eye, Pencil, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { api } from "../../lib/api";
 import type { Chapter, Project, ProjectSettings } from "../../lib/types";
@@ -38,18 +40,28 @@ export default function ChapterList({
   onProjectUpdate,
 }: ChapterListProps) {
   const navigate = useNavigate();
+  const [startingChapter, setStartingChapter] = useState<string | null>(null);
 
   async function handleStartJob(chapter: Chapter) {
-    const result = await api.startJob({
-      manga: projectName,
-      chapter: chapter.name,
-      language: settings.language,
-      backend: settings.backend,
-      ocr_backend: settings.ocr_backend,
-      translator_model: settings.translator_model || undefined,
-      limit: settings.limit,
-    });
-    navigate(`/job/${result.job_id}`);
+    setStartingChapter(chapter.name);
+    try {
+      await api.startJob({
+        manga: projectName,
+        chapter: chapter.name,
+        language: settings.language,
+        backend: settings.backend,
+        ocr_backend: settings.ocr_backend,
+        translator_model: settings.translator_model || undefined,
+        limit: settings.limit,
+      });
+      toast.success(`${chapter.name}-bob OCR boshlandi`);
+      const updated = await api.getProject(projectName);
+      onProjectUpdate(updated);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setStartingChapter(null);
+    }
   }
 
   return (
@@ -90,6 +102,20 @@ export default function ChapterList({
                     <Badge variant={statusVariant[chapter.status] || "info"}>
                       {statusLabel[chapter.status] || chapter.status}
                     </Badge>
+                    {chapter.automation_score != null && chapter.automation_score > 0 && (
+                      <span
+                        className={`text-[11px] font-medium tabular-nums ${
+                          chapter.automation_score >= 80
+                            ? "text-emerald-400"
+                            : chapter.automation_score >= 40
+                              ? "text-amber-400"
+                              : "text-zinc-400"
+                        }`}
+                        title="Avtomatlashtirish foizi"
+                      >
+                        {chapter.automation_score.toFixed(0)}% auto
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5">
                     {(chapter.status === "done" || chapter.status === "ocr_done") && (
@@ -130,12 +156,17 @@ export default function ChapterList({
                       <Button
                         size="sm"
                         className="h-8 gap-1 text-xs"
+                        disabled={startingChapter === chapter.name}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleStartJob(chapter);
                         }}
                       >
-                        <Play className="h-3.5 w-3.5" />
+                        {startingChapter === chapter.name ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Play className="h-3.5 w-3.5" />
+                        )}
                         OCR
                       </Button>
                     )}

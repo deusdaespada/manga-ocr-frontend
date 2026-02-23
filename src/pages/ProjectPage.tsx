@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { api } from "../lib/api";
 import type { GenreOption, Project, ProjectMetadata, ProjectSettings } from "../lib/types";
@@ -105,17 +106,28 @@ export default function ProjectPage() {
     navigate("/");
   }
 
+  const [translatingManga, setTranslatingManga] = useState(false);
+
   async function handleTranslateManga() {
     if (!manga) return;
     const displayName = project?.display_name || manga;
     if (!confirm(`Butun "${displayName}" mangasini tarjima qilmoqchimisiz?`)) return;
-    const result = await api.translateManga({
-      manga,
-      language: settings.language,
-      backend: settings.backend,
-      translator_model: settings.translator_model || undefined,
-    });
-    navigate(`/job/${result.job_id}`);
+    setTranslatingManga(true);
+    try {
+      await api.translateManga({
+        manga,
+        language: settings.language,
+        backend: settings.backend,
+        translator_model: settings.translator_model || undefined,
+      });
+      toast.success("Tarjima boshlandi");
+      const updated = await api.getProject(manga);
+      setProject(updated);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setTranslatingManga(false);
+    }
   }
 
   return (
@@ -124,7 +136,7 @@ export default function ProjectPage() {
         manga={manga!}
         displayName={project?.display_name || manga!}
         hasOcrDone={hasOcrDone}
-        hasTranslating={hasTranslating}
+        hasTranslating={hasTranslating || translatingManga}
         onTranslate={handleTranslateManga}
         onDelete={handleDeleteProject}
       />

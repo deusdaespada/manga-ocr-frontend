@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Save, Minus, Plus, RotateCcw, RotateCw, Languages, Eye } from "lucide-react";
+import { X, Save, Minus, Plus, RotateCcw, RotateCw, Languages, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "../../lib/api";
@@ -15,6 +15,8 @@ export type RegionDraft = {
   fontStyle?: string;
   fontColor?: string;
   fontFamily?: string;
+  fontStrokeColor?: string;
+  fontStrokeWidth?: number;
   status?: string;
 };
 
@@ -140,8 +142,8 @@ export default function RegionPanel({
               onClick={handleReocrPage}
               title="Sahifadagi barcha regionlarni qayta OCR qilish"
             >
-              <Eye className="h-2.5 w-2.5" />
-              {reocrPage ? "..." : "OCR"}
+              {reocrPage ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Eye className="h-2.5 w-2.5" />}
+              OCR
             </button>
             <button
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium text-amber-400 transition-colors hover:bg-amber-500/10 disabled:opacity-50"
@@ -149,8 +151,8 @@ export default function RegionPanel({
               onClick={handleRetranslatePage}
               title="Sahifadagi barcha matnlarni qayta tarjima qilish"
             >
-              <Languages className="h-2.5 w-2.5" />
-              {retranslatingPage ? "..." : "Tarjima"}
+              {retranslatingPage ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Languages className="h-2.5 w-2.5" />}
+              Tarjima
             </button>
           </div>
         )}
@@ -176,6 +178,10 @@ export default function RegionPanel({
             const draftFontColor = draft.fontColor ?? serverFontColor;
             const serverFontFamily = r.font_family || "Comic Neue";
             const draftFontFamily = draft.fontFamily ?? serverFontFamily;
+            const serverStrokeColor = r.font_stroke_color || "";
+            const draftStrokeColor = draft.fontStrokeColor ?? serverStrokeColor;
+            const serverStrokeWidth = r.font_stroke_width || 0;
+            const draftStrokeWidth = draft.fontStrokeWidth ?? serverStrokeWidth;
             const fontInfo = getFontEntry(draftFontFamily);
             const isDirty =
               draft.original !== (r.original_text || "") ||
@@ -185,7 +191,9 @@ export default function RegionPanel({
               draftFontWeight !== serverFontWeight ||
               draftFontStyle !== serverFontStyle ||
               draftFontColor !== serverFontColor ||
-              draftFontFamily !== serverFontFamily;
+              draftFontFamily !== serverFontFamily ||
+              draftStrokeColor !== serverStrokeColor ||
+              draftStrokeWidth !== serverStrokeWidth;
             return (
               <div key={key} className="group rounded-lg border bg-card">
                 {/* Header: number + delete */}
@@ -213,14 +221,14 @@ export default function RegionPanel({
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                    <div className={`flex items-center gap-0.5 transition-opacity ${reocrRegionIdx === i || retranslatingRegion === i ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                       <button
                         className="text-muted-foreground hover:text-blue-400 transition-colors disabled:opacity-50"
                         title="Qayta OCR"
                         disabled={reocrRegionIdx === i}
                         onClick={() => handleReocrRegion(i)}
                       >
-                        <Eye className="h-3 w-3" />
+                        {reocrRegionIdx === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
                       </button>
                       <button
                         className="text-muted-foreground hover:text-amber-400 transition-colors disabled:opacity-50"
@@ -228,7 +236,7 @@ export default function RegionPanel({
                         disabled={retranslatingRegion === i}
                         onClick={() => handleRetranslateRegion(i)}
                       >
-                        <Languages className="h-3 w-3" />
+                        {retranslatingRegion === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <Languages className="h-3 w-3" />}
                       </button>
                       <button
                         className="text-muted-foreground hover:text-destructive transition-colors"
@@ -367,7 +375,7 @@ export default function RegionPanel({
                     </button>
                     <button
                       className={`h-5 rounded border px-1.5 text-[10px] transition-colors ${draftFontStyle === "italic" ? "bg-foreground text-background" : "bg-background text-muted-foreground hover:text-foreground"} ${fontInfo && !fontInfo.hasItalic ? "opacity-40 cursor-not-allowed" : ""}`}
-                      title={draftFontStyle === "italic" ? "Oddiy qilish" : "Kursiv qilish"}
+                      title={fontInfo && !fontInfo.hasItalic ? "Bu font italic qo'llab-quvvatlamaydi" : draftFontStyle === "italic" ? "Oddiy qilish" : "Kursiv qilish"}
                       style={{ fontStyle: "italic" }}
                       onClick={() => {
                         if (fontInfo && !fontInfo.hasItalic) return;
@@ -381,6 +389,7 @@ export default function RegionPanel({
                     </button>
                     <input
                       type="color"
+                      title="Matn rangi"
                       className="h-5 w-5 cursor-pointer rounded border bg-background p-0"
                       value={draftFontColor}
                       onChange={(e) =>
@@ -403,13 +412,68 @@ export default function RegionPanel({
                       {Object.entries(fontsByCategory).map(([category, fonts]) => (
                         <optgroup key={category} label={category}>
                           {fonts.map((f) => (
-                            <option key={f.family} value={f.family}>
+                            <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>
                               {f.family}
                             </option>
                           ))}
                         </optgroup>
                       ))}
                     </select>
+                  </div>
+                  {/* Stroke (hoshiya) controls */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] text-muted-foreground w-6">Chekka</span>
+                    <input
+                      type="color"
+                      title="Chekka rangi"
+                      className="h-5 w-5 cursor-pointer rounded border bg-background p-0"
+                      value={draftStrokeColor || "#000000"}
+                      onChange={(e) =>
+                        setRegionDrafts((prev) => ({
+                          ...prev,
+                          [key]: { ...draft, fontStrokeColor: e.target.value, fontStrokeWidth: draftStrokeWidth || 2, status: undefined },
+                        }))
+                      }
+                    />
+                    <button
+                      className="flex h-5 w-5 items-center justify-center rounded border bg-background text-muted-foreground transition-colors hover:text-foreground"
+                      onClick={() =>
+                        setRegionDrafts((prev) => ({
+                          ...prev,
+                          [key]: { ...draft, fontStrokeWidth: Math.max(0, draftStrokeWidth - 1), status: undefined },
+                        }))
+                      }
+                    >
+                      <Minus className="h-2.5 w-2.5" />
+                    </button>
+                    <span className="min-w-[16px] text-center text-[10px] tabular-nums">
+                      {draftStrokeWidth}
+                    </span>
+                    <button
+                      className="flex h-5 w-5 items-center justify-center rounded border bg-background text-muted-foreground transition-colors hover:text-foreground"
+                      onClick={() =>
+                        setRegionDrafts((prev) => ({
+                          ...prev,
+                          [key]: { ...draft, fontStrokeWidth: Math.min(20, draftStrokeWidth + 1), fontStrokeColor: draftStrokeColor || "#000000", status: undefined },
+                        }))
+                      }
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
+                    {draftStrokeWidth > 0 && (
+                      <button
+                        className="flex h-4 w-4 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground"
+                        title="Chekkani o'chirish"
+                        onClick={() =>
+                          setRegionDrafts((prev) => ({
+                            ...prev,
+                            [key]: { ...draft, fontStrokeColor: "", fontStrokeWidth: 0, status: undefined },
+                          }))
+                        }
+                      >
+                        <RotateCcw className="h-2 w-2" />
+                      </button>
+                    )}
                   </div>
                   {/* Save — only visible when dirty */}
                   {(isDirty || draft.status) && (
@@ -444,6 +508,12 @@ export default function RegionPanel({
                               }
                               if (draftFontFamily !== serverFontFamily) {
                                 payload.font_family = draftFontFamily;
+                              }
+                              if (draftStrokeColor !== serverStrokeColor) {
+                                payload.font_stroke_color = draftStrokeColor;
+                              }
+                              if (draftStrokeWidth !== serverStrokeWidth) {
+                                payload.font_stroke_width = draftStrokeWidth;
                               }
                               await api.updateRegion(manga, chapter, currentPage, i, payload);
                               const updated = await api.getResults(manga, chapter);

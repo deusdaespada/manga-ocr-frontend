@@ -61,6 +61,7 @@ export default function ProjectsTable({ projects, error }: ProjectsTableProps) {
                 <TableHead>Nomi</TableHead>
                 <TableHead className="w-[100px]">Chapterlar</TableHead>
                 <TableHead className="w-[120px]">Progress</TableHead>
+                <TableHead className="w-[80px]">Auto</TableHead>
                 <TableHead className="w-[100px]">Status</TableHead>
                 <TableHead className="w-[50px]" />
               </TableRow>
@@ -105,6 +106,23 @@ export default function ProjectsTable({ projects, error }: ProjectsTableProps) {
                         </div>
                         <span className="text-xs text-muted-foreground">{progress}%</span>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {project.automation_avg != null && project.automation_avg > 0 ? (
+                        <span
+                          className={`text-xs font-medium tabular-nums ${
+                            project.automation_avg >= 80
+                              ? "text-emerald-400"
+                              : project.automation_avg >= 40
+                                ? "text-amber-400"
+                                : "text-zinc-400"
+                          }`}
+                        >
+                          {project.automation_avg.toFixed(0)}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/50">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant={statusVariant[mainStatus] || "info"}>
