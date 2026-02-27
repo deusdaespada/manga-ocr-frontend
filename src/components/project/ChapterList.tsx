@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Play, Eye, Pencil, Loader2, Trash2, Scissors, ArrowUpDown } from "lucide-react";
+import { Play, Eye, Pencil, Loader2, Trash2, Scissors, ArrowUpDown, CheckCircle2, Circle, Upload, CloudUpload } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "../../lib/api";
@@ -30,14 +30,24 @@ interface ChapterListProps {
   chapters: Chapter[];
   projectName: string;
   settings: ProjectSettings;
+  forceOcr: boolean;
+  forceClean: boolean;
+  publishedChapters: string[];
+  publishingTarget: "manga" | string | null;
   onProjectUpdate: (project: Project) => void;
+  onPublishChapter: (chapter: string) => void;
 }
 
 export default function ChapterList({
   chapters,
   projectName,
   settings,
+  forceOcr,
+  forceClean,
+  publishedChapters,
+  publishingTarget,
   onProjectUpdate,
+  onPublishChapter,
 }: ChapterListProps) {
   const navigate = useNavigate();
   const [startingChapter, setStartingChapter] = useState<string | null>(null);
@@ -53,6 +63,8 @@ export default function ChapterList({
         ocr_backend: settings.ocr_backend,
         translator_model: settings.translator_model || undefined,
         limit: settings.limit,
+        force_ocr: forceOcr || undefined,
+        force_clean: forceClean || undefined,
       });
       toast.success(`${chapter.name}-bob OCR boshlandi`);
       const updated = await api.getProject(projectName);
@@ -95,6 +107,34 @@ export default function ChapterList({
                   }}
                 >
                   <div className="flex items-center gap-4">
+                    <button
+                      className="flex-shrink-0 transition-colors"
+                      title={chapter.is_validated ? "Tekshirilgan" : "Tekshirilmagan"}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const newVal = !chapter.is_validated;
+                        // Optimistic update
+                        const updatedChapters = chapters.map((ch) =>
+                          ch.name === chapter.name ? { ...ch, is_validated: newVal } : ch
+                        );
+                        onProjectUpdate({
+                          ...({ slug: projectName, display_name: projectName, chapters: updatedChapters, chapter_count: updatedChapters.length } as Project),
+                        });
+                        try {
+                          await api.updateChapterValidated(projectName, chapter.name, newVal);
+                        } catch (err) {
+                          toast.error((err as Error).message);
+                          const reverted = await api.getProject(projectName);
+                          onProjectUpdate(reverted);
+                        }
+                      }}
+                    >
+                      {chapter.is_validated ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground/40 hover:text-muted-foreground" />
+                      )}
+                    </button>
                     <div>
                       <div className="text-sm font-medium">{chapter.name}-bob</div>
                       <div className="text-xs text-muted-foreground">{chapter.image_count} rasm</div>
@@ -102,6 +142,11 @@ export default function ChapterList({
                     <Badge variant={statusVariant[chapter.status] || "info"}>
                       {statusLabel[chapter.status] || chapter.status}
                     </Badge>
+                    {publishedChapters.includes(chapter.name) && (
+                      <span className="inline-flex items-center gap-0.5 text-[11px] font-medium text-sky-400" title="Published">
+                        <CloudUpload className="h-3 w-3" />
+                      </span>
+                    )}
                     {chapter.automation_score != null && chapter.automation_score > 0 && (
                       <span
                         className={`text-[11px] font-medium tabular-nums ${
@@ -138,6 +183,25 @@ export default function ChapterList({
                             Tahrir
                           </Button>
                         </Link>
+                        {chapter.status === "done" && chapter.is_validated && !publishedChapters.includes(chapter.name) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 gap-1 text-xs"
+                            disabled={publishingTarget !== null}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onPublishChapter(chapter.name);
+                            }}
+                          >
+                            {publishingTarget === chapter.name ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Upload className="h-3.5 w-3.5" />
+                            )}
+                            Publish
+                          </Button>
+                        )}
                       </>
                     )}
                     {(chapter.status === "processing" || chapter.status === "translating") &&

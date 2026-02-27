@@ -117,7 +117,7 @@ export default function UploadPage() {
           <CloudUpload className="mb-3 h-10 w-10 text-muted-foreground/50" />
           <p className="text-sm font-medium">Rasmlarni bu yerga tashlang yoki bosing</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            PNG, JPG, JPEG, WebP, BMP (max 50MB, 200 ta gacha)
+            PNG, JPG, JPEG, WebP, BMP (max 50MB, 999 ta gacha)
           </p>
           <input
             ref={fileInputRef}

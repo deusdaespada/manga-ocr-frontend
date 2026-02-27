@@ -19,6 +19,10 @@ interface SettingsModalProps {
   settings: ProjectSettings;
   setSettings: React.Dispatch<React.SetStateAction<ProjectSettings>>;
   saving: boolean;
+  forceOcr: boolean;
+  setForceOcr: (v: boolean) => void;
+  forceClean: boolean;
+  setForceClean: (v: boolean) => void;
   onSave: () => void;
   onClose: () => void;
 }
@@ -28,6 +32,10 @@ export default function SettingsModal({
   settings,
   setSettings,
   saving,
+  forceOcr,
+  setForceOcr,
+  forceClean,
+  setForceClean,
   onSave,
   onClose,
 }: SettingsModalProps) {
@@ -177,6 +185,27 @@ export default function SettingsModal({
             />
             <span className="text-muted-foreground">Qora bubble aniqlash (dark bubble detection)</span>
           </label>
+          <div className="space-y-1.5 rounded-md border border-dashed border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="text-[11px] font-medium text-amber-500/80">Qayta ishlash</p>
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={forceOcr}
+                onChange={(e) => setForceOcr(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-muted-foreground">Qayta OCR (mavjud natijalarni o'chirib boshidan)</span>
+            </label>
+            <label className="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                checked={forceClean}
+                onChange={(e) => setForceClean(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-muted-foreground">Qayta Clean (tozalangan rasmlarni qayta tozalash)</span>
+            </label>
+          </div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t px-5 py-3">
           <Button variant="ghost" size="sm" onClick={onClose}>

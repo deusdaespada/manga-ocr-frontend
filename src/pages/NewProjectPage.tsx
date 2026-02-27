@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Loader2 } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { CleanerBackendValue, OcrBackendValue, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
+import type { CleanerBackendValue, Folder, OcrBackendValue, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -36,9 +36,12 @@ export default function NewProjectPage() {
   const [cleanerBackend, setCleanerBackend] = useState<CleanerBackendValue>("lama");
   const [translatorModel, setTranslatorModel] = useState("");
   const [modelsMap, setModelsMap] = useState<TranslatorModelsMap>({});
+  const [folder, setFolder] = useState("");
+  const [existingFolders, setExistingFolders] = useState<Folder[]>([]);
 
   useEffect(() => {
     api.getTranslatorModels().then(setModelsMap).catch(() => {});
+    api.getFolders().then(setExistingFolders).catch(() => {});
   }, []);
 
   const currentModels: TranslatorModelInfo[] = modelsMap[backend] || [];
@@ -70,6 +73,7 @@ export default function NewProjectPage() {
         ocr_backend: ocrBackend,
         cleaner_backend: cleanerBackend,
         translator_model: translatorModel || undefined,
+        folder: folder.trim() || undefined,
       });
       navigate(`/project/${result.slug}`);
     } catch (e) {
@@ -144,6 +148,28 @@ export default function NewProjectPage() {
             Janrlar <span className="text-red-400">*</span>
           </label>
           <GenrePicker value={tags} onChange={setTags} />
+        </div>
+
+        {/* Folder */}
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Folder</label>
+          <Select
+            value={folder || "__none__"}
+            onValueChange={(v) => setFolder(v === "__none__" ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Folder tanlang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— Foldersiz —</SelectItem>
+              {existingFolders.map((f) => (
+                <SelectItem key={f.name} value={f.name}>{f.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Dashboard da mangalarni guruhlash uchun folder belgilang. Yangi folder Dashboard dan yaratiladi.
+          </p>
         </div>
 
         {/* Pipeline settings inline */}

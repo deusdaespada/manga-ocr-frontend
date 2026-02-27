@@ -6,7 +6,7 @@ import { api } from "../lib/api";
 import type { Project, Stats } from "../lib/types";
 import { Button } from "../components/ui/button";
 import StatsCards from "../components/dashboard/StatsCards";
-import ProjectsTable from "../components/dashboard/ProjectsTable";
+import FolderView from "../components/dashboard/FolderView";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -47,7 +47,7 @@ export default function DashboardPage() {
       </div>
 
       <StatsCards stats={stats} />
-      <ProjectsTable projects={projects} error={error} />
+      <FolderView projects={projects} error={error} onProjectsChange={setProjects} />
     </div>
   );
 }

@@ -14,6 +14,7 @@ export type Chapter = {
   automation_score?: number;
   has_tall_images?: boolean;
   crop_status?: string | null;
+  is_validated?: boolean;
 };
 
 export type ProjectMetadata = {
@@ -35,6 +36,9 @@ export type Project = {
   settings?: ProjectSettings;
   metadata?: ProjectMetadata;
   automation_avg?: number;
+  folder?: string;
+  published_at?: string;
+  published_chapters?: string[];
 };
 
 export type ProjectCreateRequest = {
@@ -52,6 +56,7 @@ export type ProjectCreateRequest = {
   cleaner_backend?: CleanerBackendValue;
   translator_model?: string;
   limit?: number;
+  folder?: string;
 };
 
 export type ProjectMetadataUpdate = {
@@ -67,6 +72,12 @@ export type ProjectMetadataUpdate = {
 export type Tag = {
   id: number;
   name: string;
+  project_count: number;
+};
+
+export type Folder = {
+  name: string;
+  created_at: string;
   project_count: number;
 };
 
@@ -219,8 +230,8 @@ export type RunInfo = {
 };
 
 export type WsMessage =
-  | { type: "log"; message: string; level: string; progress: number }
-  | { type: "done"; message: string; progress: number; pages?: number; regions?: number; chapters?: number; cost_usd?: number }
+  | { type: "log"; message: string; level: string; progress: number; chapter?: string; page?: number; total_pages?: number; uploaded_mb?: number }
+  | { type: "done"; message: string; progress: number; pages?: number; regions?: number; chapters?: number; cost_usd?: number; published_chapters?: number; total_pages?: number; total_mb?: number; cdn_base_url?: string }
   | { type: "error"; message: string; progress: number }
   | { type: "cancelled"; message: string; progress: number }
   | { type: "ping"; message: string };
@@ -256,4 +267,10 @@ export type RetranslateRequest = {
   regions?: { page_idx: number; region_idx: number }[];
   all?: boolean;
   backend?: string;
+};
+
+export type PublishStartResponse = {
+  publish_id: string;
+  chapters_to_publish?: number;
+  pages_to_publish?: number;
 };

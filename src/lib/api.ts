@@ -1,6 +1,7 @@
 import type {
   AutomationInfo,
   CropPreviewResponse,
+  Folder,
   GenreOption,
   JobInfo,
   JobStartResponse,
@@ -10,6 +11,7 @@ import type {
   Project,
   ProjectCreateRequest,
   ProjectMetadataUpdate,
+  PublishStartResponse,
   RestartResponse,
   ResultsData,
   RetranslateRequest,
@@ -299,5 +301,44 @@ export const api = {
         body: JSON.stringify({ source, target }),
       }
     ).then(handle<{ ok: boolean; target: string; deleted: string; total_images: number }>);
+  },
+  updateProjectFolder(slug: string, folder: string): Promise<{ slug: string; folder: string }> {
+    return fetch(`/api/projects/${encodeURIComponent(slug)}/folder`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folder }),
+    }).then(handle<{ slug: string; folder: string }>);
+  },
+  updateChapterValidated(manga: string, chapter: string, isValidated: boolean): Promise<{ manga: string; chapter: string; is_validated: boolean }> {
+    return fetch(`/api/projects/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/validated`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_validated: isValidated }),
+    }).then(handle<{ manga: string; chapter: string; is_validated: boolean }>);
+  },
+  getFolders(): Promise<Folder[]> {
+    return fetch("/api/folders").then(handle<Folder[]>);
+  },
+  createFolder(name: string): Promise<Folder> {
+    return fetch("/api/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    }).then(handle<Folder>);
+  },
+  deleteFolder(name: string): Promise<{ deleted: string }> {
+    return fetch(`/api/folders/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    }).then(handle<{ deleted: string }>);
+  },
+  publishManga(manga: string): Promise<PublishStartResponse> {
+    return fetch(`/api/publish/${encodeURIComponent(manga)}`, {
+      method: "POST",
+    }).then(handle<PublishStartResponse>);
+  },
+  publishChapter(manga: string, chapter: string): Promise<PublishStartResponse> {
+    return fetch(`/api/publish/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}`, {
+      method: "POST",
+    }).then(handle<PublishStartResponse>);
   },
 };

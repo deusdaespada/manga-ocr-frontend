@@ -85,6 +85,8 @@ export default function ResultsPage() {
   const [rerunLoading, setRerunLoading] = useState(false);
   const [rerunSkipConfirm, setRerunSkipConfirm] = useState(false);
   const [rerunSkipClean, setRerunSkipClean] = useState(false);
+  const [rerunForceOcr, setRerunForceOcr] = useState(false);
+  const [rerunForceClean, setRerunForceClean] = useState(false);
 
   const originalImgRef = useRef<HTMLImageElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -635,6 +637,8 @@ export default function ResultsPage() {
         translator_model: settings.translator_model || undefined,
         skip_clean: rerunSkipClean,
         limit: settings.limit,
+        force_ocr: rerunForceOcr || undefined,
+        force_clean: rerunForceClean || undefined,
       });
       if (rerunSkipConfirm) {
         localStorage.setItem(`ocr-rerun-skip-confirm:${manga}`, "true");
@@ -670,7 +674,7 @@ export default function ResultsPage() {
       setStatus(`Xatolik: ${err.message}`);
       setRerunLoading(false);
     }
-  }, [manga, chapter, rerunSkipConfirm, rerunSkipClean]);
+  }, [manga, chapter, rerunSkipConfirm, rerunSkipClean, rerunForceOcr, rerunForceClean]);
 
   const handleRerunOcr = useCallback(async () => {
     if (!manga || !chapter) return;
@@ -990,9 +994,17 @@ export default function ResultsPage() {
         setSkipConfirm={setRerunSkipConfirm}
         skipClean={rerunSkipClean}
         setSkipClean={setRerunSkipClean}
+        forceOcr={rerunForceOcr}
+        setForceOcr={setRerunForceOcr}
+        forceClean={rerunForceClean}
+        setForceClean={setRerunForceClean}
         loading={rerunLoading}
         onRun={() => executeRerunOcr(rerunSettings)}
-        onClose={() => setRerunModalOpen(false)}
+        onClose={() => {
+          setRerunModalOpen(false);
+          setRerunForceOcr(false);
+          setRerunForceClean(false);
+        }}
       />
     </div>
   );

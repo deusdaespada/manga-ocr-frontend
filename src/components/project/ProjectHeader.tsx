@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Languages, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Languages, Trash2, Loader2, Upload } from "lucide-react";
 
 import { Button } from "../ui/button";
 
@@ -8,7 +8,10 @@ interface ProjectHeaderProps {
   displayName: string;
   hasOcrDone: boolean;
   hasTranslating: boolean;
+  hasPublishableChapters: boolean;
+  isPublishing: boolean;
   onTranslate: () => void;
+  onPublish: () => void;
   onDelete: () => void;
 }
 
@@ -17,7 +20,10 @@ export default function ProjectHeader({
   displayName,
   hasOcrDone,
   hasTranslating,
+  hasPublishableChapters,
+  isPublishing,
   onTranslate,
+  onPublish,
   onDelete,
 }: ProjectHeaderProps) {
   return (
@@ -50,6 +56,22 @@ export default function ProjectHeader({
             Tarjima qilish
           </Button>
         ) : null}
+        {hasPublishableChapters && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isPublishing}
+            onClick={onPublish}
+            className="gap-1.5"
+          >
+            {isPublishing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Upload className="h-3.5 w-3.5" />
+            )}
+            Publish
+          </Button>
+        )}
         <Button variant="destructive" size="sm" onClick={onDelete} className="gap-1.5">
           <Trash2 className="h-3.5 w-3.5" />
           O'chirish

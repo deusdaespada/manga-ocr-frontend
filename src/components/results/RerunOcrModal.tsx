@@ -22,6 +22,10 @@ interface RerunOcrModalProps {
   setSkipConfirm: (v: boolean) => void;
   skipClean: boolean;
   setSkipClean: (v: boolean) => void;
+  forceOcr: boolean;
+  setForceOcr: (v: boolean) => void;
+  forceClean: boolean;
+  setForceClean: (v: boolean) => void;
   loading: boolean;
   onRun: () => void;
   onClose: () => void;
@@ -35,6 +39,10 @@ export default function RerunOcrModal({
   setSkipConfirm,
   skipClean,
   setSkipClean,
+  forceOcr,
+  setForceOcr,
+  forceClean,
+  setForceClean,
   loading,
   onRun,
   onClose,
@@ -183,6 +191,27 @@ export default function RerunOcrModal({
             />
             Faqat OCR (rasmlarni qayta tozalamaslik)
           </label>
+          <div className="space-y-1.5 rounded-md border border-dashed border-amber-500/30 bg-amber-500/5 p-3">
+            <p className="text-[11px] font-medium text-amber-500/80">Qayta ishlash</p>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={forceOcr}
+                onChange={(e) => setForceOcr(e.target.checked)}
+                className="rounded border-input"
+              />
+              Qayta OCR (mavjud natijalarni o'chirib boshidan)
+            </label>
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={forceClean}
+                onChange={(e) => setForceClean(e.target.checked)}
+                className="rounded border-input"
+              />
+              Qayta Clean (tozalangan rasmlarni qayta tozalash)
+            </label>
+          </div>
           <label className="flex items-center gap-2 text-xs text-muted-foreground">
             <input
               type="checkbox"
