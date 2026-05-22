@@ -8,6 +8,14 @@ import type {
   MangaAutomation,
   MangaAutofillRequest,
   MangaAutofillResponse,
+  MangaDexFeedResponse,
+  MangaDexImportMangaResponse,
+  MangaDexImportRequest,
+  MangaDexImportResponse,
+  MangaDexManga,
+  MangaDexSearchParams,
+  MangaDexSearchResponse,
+  MangaDexTag,
   OcrBackendInfo,
   PageInfo,
   Project,
@@ -421,5 +429,55 @@ export const api = {
     return fetch(`/api/projects/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/thumbnail`, {
       method: "DELETE",
     }).then(handle<{ ok: boolean }>);
+  },
+
+  // ── MangaDex ────────────────────────────────────────────────────────
+
+  getMangaDexTags(): Promise<{ tags: MangaDexTag[] }> {
+    return fetch("/api/mangadex/tags").then(handle<{ tags: MangaDexTag[] }>);
+  },
+  searchMangaDex(params: MangaDexSearchParams): Promise<MangaDexSearchResponse> {
+    const qs = new URLSearchParams();
+    if (params.title) qs.set("title", params.title);
+    for (const t of params.tag_ids ?? []) qs.append("tag_ids[]", t);
+    for (const t of params.excluded_tag_ids ?? []) qs.append("excluded_tag_ids[]", t);
+    if (params.included_tags_mode) qs.set("included_tags_mode", params.included_tags_mode);
+    for (const s of params.status ?? []) qs.append("status[]", s);
+    for (const d of params.demographic ?? []) qs.append("demographic[]", d);
+    for (const c of params.content_rating ?? []) qs.append("content_rating[]", c);
+    if (params.year != null) qs.set("year", String(params.year));
+    if (params.order) qs.set("order", params.order);
+    if (params.limit != null) qs.set("limit", String(params.limit));
+    if (params.offset != null) qs.set("offset", String(params.offset));
+    return fetch(`/api/mangadex/search?${qs.toString()}`).then(handle<MangaDexSearchResponse>);
+  },
+  getMangaDexManga(mangaId: string): Promise<MangaDexManga> {
+    return fetch(`/api/mangadex/manga/${encodeURIComponent(mangaId)}`).then(handle<MangaDexManga>);
+  },
+  getMangaDexFeed(mangaId: string, offset = 0, limit = 100): Promise<MangaDexFeedResponse> {
+    const qs = new URLSearchParams({ offset: String(offset), limit: String(limit) });
+    return fetch(
+      `/api/mangadex/manga/${encodeURIComponent(mangaId)}/feed?${qs.toString()}`,
+    ).then(handle<MangaDexFeedResponse>);
+  },
+  importMangaDexChapter(payload: MangaDexImportRequest): Promise<MangaDexImportResponse> {
+    return fetch("/api/mangadex/import/chapter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(handle<MangaDexImportResponse>);
+  },
+  importMangaDexManga(
+    mangaId: string,
+    targetSlug: string | null = null,
+  ): Promise<MangaDexImportMangaResponse> {
+    return fetch("/api/mangadex/import/manga", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mangadex_manga_id: mangaId,
+        target_slug: targetSlug,
+      }),
+    }).then(handle<MangaDexImportMangaResponse>);
   },
 };

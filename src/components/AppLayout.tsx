@@ -7,6 +7,7 @@ import {
   Plus,
   PanelLeftClose,
   PanelLeft,
+  Search,
 } from "lucide-react";
 
 import { cn } from "../lib/utils";
@@ -15,6 +16,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/new", label: "Yangi manga", icon: Plus },
   { to: "/upload", label: "Yuklash", icon: Upload },
+  { to: "/mangadex", label: "Search Manga", icon: Search },
   { to: "/jobs", label: "Joblar", icon: Activity },
 ];
 

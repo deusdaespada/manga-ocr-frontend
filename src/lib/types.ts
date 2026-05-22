@@ -324,3 +324,93 @@ export type R2SyncResponse = {
   warnings: string[];
   projects: R2SyncProjectSummary[];
 };
+
+
+// ── MangaDex import ────────────────────────────────────────────────────
+
+export type MangaDexTag = {
+  id: string;
+  name: string;
+  group: string;
+};
+
+export type MangaDexManga = {
+  id: string;
+  title_en: string;
+  description_en: string;
+  original_language: string;
+  alt_titles: string[];
+  status: string;
+  year: number | null;
+  content_rating: string;
+  publication_demographic: string;
+  tags: MangaDexTag[];
+  authors: string[];
+  artists: string[];
+  cover_file_name: string;
+  cover_thumb_url: string;
+  cover_url: string;
+  english_available: boolean;
+  local_match_slug?: string | null;
+};
+
+export type MangaDexChapter = {
+  id: string;
+  chapter: string;
+  title: string;
+  pages: number;
+  publish_at: string;
+  external_url: string;
+  scanlation_group: string;
+  translated_language: string;
+  kind: "available" | "external" | "empty";
+  imported?: boolean;
+  local_chapter?: { manga_slug: string; chapter: string; status: string } | null;
+};
+
+export type MangaDexSearchResponse = {
+  results: MangaDexManga[];
+  limit: number;
+  offset: number;
+  total: number;
+};
+
+export type MangaDexFeedResponse = {
+  results: MangaDexChapter[];
+  limit: number;
+  offset: number;
+  total: number;
+};
+
+export type MangaDexSearchParams = {
+  title?: string;
+  tag_ids?: string[];
+  excluded_tag_ids?: string[];
+  included_tags_mode?: "AND" | "OR";
+  status?: string[];
+  demographic?: string[];
+  content_rating?: string[];
+  year?: number | null;
+  order?: string | null;
+  limit?: number;
+  offset?: number;
+};
+
+export type MangaDexImportRequest = {
+  mangadex_manga_id: string;
+  mangadex_chapter_id: string;
+  target_slug?: string | null;
+};
+
+export type MangaDexImportResponse = {
+  status: "started" | "exists";
+  job_id?: string;
+  manga_slug?: string | null;
+  detail?: string;
+};
+
+export type MangaDexImportMangaResponse = {
+  status: "started";
+  job_ids: string[];
+  total: number;
+};

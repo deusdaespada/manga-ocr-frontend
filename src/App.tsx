@@ -11,6 +11,8 @@ import EditorPage from "./pages/EditorPage";
 import CropPreviewPage from "./pages/CropPreviewPage";
 import ReorderPage from "./pages/ReorderPage";
 import NewProjectPage from "./pages/NewProjectPage";
+import MangaDexSearchPage from "./pages/MangaDexSearchPage";
+import MangaDexDetailPage from "./pages/MangaDexDetailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="/new" element={<NewProjectPage />} />
         <Route path="/upload" element={<UploadPage />} />
         <Route path="/upload/:manga" element={<UploadPage />} />
+        <Route path="/mangadex" element={<MangaDexSearchPage />} />
+        <Route path="/mangadex/:mangaId" element={<MangaDexDetailPage />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/job/:jobId" element={<JobDetailPage />} />
         <Route path="/project/:manga" element={<ProjectPage />} />
