@@ -4,6 +4,7 @@ import { X, Save, Loader2, Settings2 } from "lucide-react";
 import { api } from "../../lib/api";
 import type { ProjectSettings, TranslatorModelInfo, TranslatorModelsMap } from "../../lib/types";
 import OcrBackendSelect from "../OcrBackendSelect";
+import InpaintBackendSelect from "../InpaintBackendSelect";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -143,21 +144,13 @@ export default function SettingsModal({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Cleaner backend</label>
-              <Select
-                value={settings.cleaner_backend ?? "lama"}
+              <label className="text-xs font-medium text-muted-foreground">Cleaner (inpaint) backend</label>
+              <InpaintBackendSelect
+                value={settings.inpaint_backend ?? "migan"}
                 onValueChange={(value) =>
-                  setSettings((prev) => ({ ...prev, cleaner_backend: value as ProjectSettings["cleaner_backend"] }))
+                  setSettings((prev) => ({ ...prev, inpaint_backend: value }))
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Cleaner" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pcleaner">PCleaner</SelectItem>
-                  <SelectItem value="lama">LaMa (default)</SelectItem>
-                </SelectContent>
-              </Select>
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Rasm limiti</label>

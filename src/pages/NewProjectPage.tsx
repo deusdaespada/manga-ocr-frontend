@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, Sparkles } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { CleanerBackendValue, Folder, OcrBackendValue, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
+import type { Folder, InpaintBackendValue, OcrBackendValue, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -17,6 +17,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import GenrePicker from "../components/GenrePicker";
 import OcrBackendSelect from "../components/OcrBackendSelect";
+import InpaintBackendSelect from "../components/InpaintBackendSelect";
 
 export default function NewProjectPage() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function NewProjectPage() {
   const [language, setLanguage] = useState<"ja" | "ko" | "ru" | "en">("en");
   const [backend, setBackend] = useState<"openai" | "ollama" | "gemini">("gemini");
   const [ocrBackend, setOcrBackend] = useState<OcrBackendValue>("yolo_florence");
-  const [cleanerBackend, setCleanerBackend] = useState<CleanerBackendValue>("lama");
+  const [inpaintBackend, setInpaintBackend] = useState<InpaintBackendValue>("migan");
   const [translatorModel, setTranslatorModel] = useState("");
   const [modelsMap, setModelsMap] = useState<TranslatorModelsMap>({});
   const [folder, setFolder] = useState("");
@@ -99,7 +100,7 @@ export default function NewProjectPage() {
         language,
         backend,
         ocr_backend: ocrBackend,
-        cleaner_backend: cleanerBackend,
+        inpaint_backend: inpaintBackend,
         translator_model: translatorModel || undefined,
         folder: folder.trim() || undefined,
       });
@@ -281,16 +282,8 @@ export default function NewProjectPage() {
             <OcrBackendSelect value={ocrBackend} onValueChange={setOcrBackend} />
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Cleaner backend</label>
-            <Select value={cleanerBackend} onValueChange={(v) => setCleanerBackend(v as CleanerBackendValue)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pcleaner">PCleaner</SelectItem>
-                <SelectItem value="lama">LaMa (default)</SelectItem>
-              </SelectContent>
-            </Select>
+            <label className="text-xs text-muted-foreground">Cleaner (inpaint) backend</label>
+            <InpaintBackendSelect value={inpaintBackend} onValueChange={setInpaintBackend} />
           </div>
         </div>
 

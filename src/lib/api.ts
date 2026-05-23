@@ -21,6 +21,7 @@ import type {
   MangaDexSearchResponse,
   MangaDexTag,
   OcrBackendInfo,
+  InpaintBackendInfo,
   PageInfo,
   Project,
   ProjectCreateRequest,
@@ -106,6 +107,9 @@ export const api = {
   },
   getOcrBackends(): Promise<OcrBackendInfo[]> {
     return fetch("/api/ocr-backends").then(handle<OcrBackendInfo[]>);
+  },
+  getInpaintBackends(): Promise<InpaintBackendInfo[]> {
+    return fetch("/api/inpaint-backends").then(handle<InpaintBackendInfo[]>);
   },
   getTranslatorModels(): Promise<TranslatorModelsMap> {
     return fetch("/api/translator-models").then(handle<TranslatorModelsMap>);

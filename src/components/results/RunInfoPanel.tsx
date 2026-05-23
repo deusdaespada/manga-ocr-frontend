@@ -31,7 +31,11 @@ function RunSection({ label, entry }: { label: string; entry: RunEntry }) {
 
   const configParts: string[] = [];
   if (cfg.ocr_backend) configParts.push(`OCR: ${cfg.ocr_backend}`);
-  if (cfg.cleaner_backend) configParts.push(`Cleaner: ${cfg.cleaner_backend}`);
+  if (cfg.inpaint_backend) {
+    configParts.push(`Cleaner: ${cfg.inpaint_backend}`);
+  } else if (cfg.cleaner_backend) {
+    configParts.push(`Cleaner: ${cfg.cleaner_backend}`);
+  }
   if (cfg.translator_backend) configParts.push(`${cfg.translator_backend}`);
   if (cfg.translator_model) configParts.push(cfg.translator_model);
   if (cfg.language) configParts.push(`Til: ${cfg.language}`);

@@ -149,6 +149,7 @@ export default function ChapterList({
         language: settings.language,
         backend: settings.backend,
         ocr_backend: settings.ocr_backend,
+        inpaint_backend: settings.inpaint_backend,
         translator_model: settings.translator_model || undefined,
         limit: settings.limit,
         force_ocr: forceOcr || undefined,

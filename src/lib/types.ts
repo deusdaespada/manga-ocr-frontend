@@ -62,6 +62,7 @@ export type ProjectCreateRequest = {
   backend?: "openai" | "ollama" | "gemini";
   ocr_backend?: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence";
   cleaner_backend?: CleanerBackendValue;
+  inpaint_backend?: InpaintBackendValue;
   translator_model?: string;
   limit?: number;
   folder?: string;
@@ -111,11 +112,14 @@ export type GenreOption = {
 
 export type CleanerBackendValue = "pcleaner" | "lama";
 
+export type InpaintBackendValue = "migan" | "lama";
+
 export type ProjectSettings = {
   language: "ja" | "ko" | "ru" | "en";
   backend: "openai" | "ollama" | "gemini";
   ocr_backend: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence";
   cleaner_backend: CleanerBackendValue;
+  inpaint_backend: InpaintBackendValue;
   translator_model: string;
   limit: number;
   detect_dark_bubbles: boolean;
@@ -141,6 +145,14 @@ export type OcrBackendInfo = {
   monthly_limit?: number;
   used?: number;
   remaining?: number;
+};
+
+export type InpaintBackendInfo = {
+  value: InpaintBackendValue;
+  label: string;
+  type: "local";
+  size_mb?: number;
+  default?: boolean;
 };
 
 export type JobStatus = "running" | "done" | "failed" | "cancelled";
@@ -233,6 +245,7 @@ export type RunConfig = {
   language?: string;
   ocr_backend?: string;
   cleaner_backend?: string;
+  inpaint_backend?: string;
   translator_backend?: string;
   translator_model?: string;
   skip_clean?: boolean;
