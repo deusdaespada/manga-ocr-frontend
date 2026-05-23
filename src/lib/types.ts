@@ -119,6 +119,9 @@ export type ProjectSettings = {
   translator_model: string;
   limit: number;
   detect_dark_bubbles: boolean;
+  // Auto-merge'dan oldin reklamalarni kesish (px). 0 — kesilmaydi.
+  crop_ads_top_px: number;
+  crop_ads_bottom_px: number;
 };
 
 export type TranslatorModelInfo = {

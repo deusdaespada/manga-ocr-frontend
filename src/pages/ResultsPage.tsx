@@ -44,6 +44,8 @@ const DEFAULT_SETTINGS: ProjectSettings = {
   translator_model: "",
   limit: 0,
   detect_dark_bubbles: false,
+  crop_ads_top_px: 0,
+  crop_ads_bottom_px: 0,
 };
 
 export default function ResultsPage() {

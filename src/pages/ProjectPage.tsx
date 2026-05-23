@@ -28,6 +28,8 @@ export default function ProjectPage() {
     translator_model: "",
     limit: 0,
     detect_dark_bubbles: false,
+    crop_ads_top_px: 0,
+    crop_ads_bottom_px: 0,
   });
   const [saving, setSaving] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
@@ -59,6 +61,8 @@ export default function ProjectPage() {
             translator_model: data.settings.translator_model || "",
             limit: data.settings.limit || 0,
             detect_dark_bubbles: data.settings.detect_dark_bubbles ?? false,
+            crop_ads_top_px: data.settings.crop_ads_top_px ?? 0,
+            crop_ads_bottom_px: data.settings.crop_ads_bottom_px ?? 0,
           });
         }
         if (data.metadata) {
@@ -407,22 +411,41 @@ export default function ProjectPage() {
 
   async function handlePublishManga() {
     if (!manga) return;
-    const displayName = project?.display_name || manga;
-    if (!confirm(`"${displayName}" mangasini publish qilmoqchimisiz?`)) return;
+    if (publishId) {
+      toast.info("Publish allaqachon ishlamoqda");
+      return;
+    }
     try {
       const res = await api.publishManga(manga);
       setPublishId(res.publish_id);
       setPublishingTarget("manga");
       setPublishProgress(0);
-      setPublishMessage("Publish boshlanmoqda...");
+      const count = res.chapters_to_publish ?? 0;
+      const pages = res.pages_to_publish ?? 0;
+      setPublishMessage(
+        count > 0
+          ? `Publish boshlanmoqda... (${count} bob, ${pages} sahifa)`
+          : "Publish boshlanmoqda..."
+      );
       setPublishUploadedMb(0);
+      toast.success(
+        count > 0
+          ? `Publish boshlandi: ${count} bob`
+          : "Publish boshlandi"
+      );
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message;
+      toast.error(`Publish boshlanmadi: ${msg}`);
+      console.error("publishManga xato:", e);
     }
   }
 
   async function handlePublishChapter(chapter: string) {
     if (!manga) return;
+    if (publishId) {
+      toast.info("Publish allaqachon ishlamoqda");
+      return;
+    }
     try {
       const res = await api.publishChapter(manga, chapter);
       setPublishId(res.publish_id);
@@ -431,7 +454,9 @@ export default function ProjectPage() {
       setPublishMessage(`${chapter}-bob publish boshlanmoqda...`);
       setPublishUploadedMb(0);
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message;
+      toast.error(`${chapter}-bob publish: ${msg}`);
+      console.error("publishChapter xato:", e);
     }
   }
 
