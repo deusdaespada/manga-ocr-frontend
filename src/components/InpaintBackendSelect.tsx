@@ -35,6 +35,7 @@ export default function InpaintBackendSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="opencv">OpenCV (eng tez, Mac sovuq)</SelectItem>
           <SelectItem value="migan">MIGAN ONNX (default)</SelectItem>
           <SelectItem value="lama">LaMa</SelectItem>
         </SelectContent>

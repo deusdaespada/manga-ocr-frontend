@@ -112,7 +112,7 @@ export type GenreOption = {
 
 export type CleanerBackendValue = "pcleaner" | "lama";
 
-export type InpaintBackendValue = "migan" | "lama";
+export type InpaintBackendValue = "opencv" | "migan" | "lama";
 
 export type ProjectSettings = {
   language: "ja" | "ko" | "ru" | "en";
