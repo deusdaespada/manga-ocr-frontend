@@ -60,7 +60,7 @@ export type ProjectCreateRequest = {
   tags?: string[];
   language?: "ja" | "ko" | "ru" | "en";
   backend?: "openai" | "ollama" | "gemini";
-  ocr_backend?: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence" | "yolo_gemini";
+  ocr_backend?: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence" | "yolo_gemini" | "apple_vision";
   cleaner_backend?: CleanerBackendValue;
   inpaint_backend?: InpaintBackendValue;
   translator_model?: string;
@@ -117,7 +117,7 @@ export type InpaintBackendValue = "opencv" | "migan" | "lama";
 export type ProjectSettings = {
   language: "ja" | "ko" | "ru" | "en";
   backend: "openai" | "ollama" | "gemini";
-  ocr_backend: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence" | "yolo_gemini";
+  ocr_backend: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence" | "yolo_gemini" | "apple_vision";
   cleaner_backend: CleanerBackendValue;
   inpaint_backend: InpaintBackendValue;
   translator_model: string;
