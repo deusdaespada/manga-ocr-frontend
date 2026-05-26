@@ -162,6 +162,12 @@ export default function ProjectPage() {
         title_ja: metaDraft.title_ja,
         title_ko: metaDraft.title_ko,
         tags: metaDraft.tags,
+        status: metaDraft.status,
+        age_rating: metaDraft.age_rating,
+        year: metaDraft.year ?? null,
+        rating: metaDraft.rating ?? null,
+        schedule_days: metaDraft.schedule_days ?? [],
+        authors: (metaDraft.authors ?? []).filter((a) => a.name.trim().length > 0),
       });
       setEditingMeta(false);
       const updated = await api.getProject(manga);

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, Loader2, Sparkles } from "lucide-react";
 
 import { api } from "../lib/api";
-import type { Folder, InpaintBackendValue, OcrBackendValue, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
+import type { AgeRating, AuthorEntry, Folder, InpaintBackendValue, MangaStatus, OcrBackendValue, ScheduleDay, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import GenrePicker from "../components/GenrePicker";
 import OcrBackendSelect from "../components/OcrBackendSelect";
 import InpaintBackendSelect from "../components/InpaintBackendSelect";
+import MetadataExtraFields from "../components/MetadataExtraFields";
 
 export default function NewProjectPage() {
   const navigate = useNavigate();
@@ -36,6 +37,12 @@ export default function NewProjectPage() {
   const [titleJa, setTitleJa] = useState("");
   const [titleKo, setTitleKo] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [status, setStatus] = useState<MangaStatus>("ongoing");
+  const [ageRating, setAgeRating] = useState<AgeRating>("13+");
+  const [year, setYear] = useState<string>("");
+  const [rating, setRating] = useState<string>("");
+  const [scheduleDays, setScheduleDays] = useState<ScheduleDay[]>([]);
+  const [authors, setAuthors] = useState<AuthorEntry[]>([]);
   const [language, setLanguage] = useState<"ja" | "ko" | "ru" | "en">("en");
   const [backend, setBackend] = useState<"openai" | "ollama" | "gemini">("gemini");
   const [ocrBackend, setOcrBackend] = useState<OcrBackendValue>("apple_vision");
@@ -88,6 +95,11 @@ export default function NewProjectPage() {
     setSaving(true);
     setError("");
     try {
+      const yearNum = year.trim() ? parseInt(year.trim(), 10) : null;
+      const ratingNum = rating.trim() ? parseFloat(rating.trim()) : null;
+      const cleanedAuthors = authors
+        .map((a) => ({ name: a.name.trim(), role: a.role }))
+        .filter((a) => a.name.length > 0);
       const result = await api.createProject({
         name: name.trim(),
         description: description.trim(),
@@ -97,6 +109,12 @@ export default function NewProjectPage() {
         title_ja: titleJa.trim(),
         title_ko: titleKo.trim(),
         tags,
+        status,
+        age_rating: ageRating,
+        year: yearNum && !Number.isNaN(yearNum) ? yearNum : null,
+        rating: ratingNum != null && !Number.isNaN(ratingNum) ? ratingNum : null,
+        schedule_days: scheduleDays,
+        authors: cleanedAuthors,
         language,
         backend,
         ocr_backend: ocrBackend,
@@ -207,6 +225,22 @@ export default function NewProjectPage() {
               <label className="text-sm font-medium">Janrlar</label>
               <GenrePicker value={tags} onChange={setTags} />
             </div>
+
+            {/* Status, age rating, year, schedule, authors */}
+            <MetadataExtraFields
+              status={status}
+              setStatus={setStatus}
+              ageRating={ageRating}
+              setAgeRating={setAgeRating}
+              year={year}
+              setYear={setYear}
+              rating={rating}
+              setRating={setRating}
+              scheduleDays={scheduleDays}
+              setScheduleDays={setScheduleDays}
+              authors={authors}
+              setAuthors={setAuthors}
+            />
           </TabsContent>
         </Tabs>
 

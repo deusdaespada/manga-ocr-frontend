@@ -1,10 +1,11 @@
 import { X, Check, Loader2 } from "lucide-react";
 
-import type { ProjectMetadata } from "../../lib/types";
+import type { AgeRating, AuthorEntry, MangaStatus, ProjectMetadata, ScheduleDay } from "../../lib/types";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import GenrePicker from "../GenrePicker";
+import MetadataExtraFields from "../MetadataExtraFields";
 
 interface EditMetadataModalProps {
   open: boolean;
@@ -102,6 +103,26 @@ export default function EditMetadataModal({
                 onChange={(genres) => setMetaDraft((prev) => ({ ...prev, tags: genres }))}
               />
             </div>
+            <MetadataExtraFields
+              status={(metaDraft.status as MangaStatus) ?? "ongoing"}
+              setStatus={(v) => setMetaDraft((prev) => ({ ...prev, status: v }))}
+              ageRating={(metaDraft.age_rating as AgeRating) ?? "13+"}
+              setAgeRating={(v) => setMetaDraft((prev) => ({ ...prev, age_rating: v }))}
+              year={metaDraft.year != null ? String(metaDraft.year) : ""}
+              setYear={(v) => {
+                const n = v.trim() ? parseInt(v.trim(), 10) : null;
+                setMetaDraft((prev) => ({ ...prev, year: n && !Number.isNaN(n) ? n : null }));
+              }}
+              rating={metaDraft.rating != null ? String(metaDraft.rating) : ""}
+              setRating={(v) => {
+                const n = v.trim() ? parseFloat(v.trim()) : null;
+                setMetaDraft((prev) => ({ ...prev, rating: n != null && !Number.isNaN(n) ? n : null }));
+              }}
+              scheduleDays={(metaDraft.schedule_days as ScheduleDay[]) ?? []}
+              setScheduleDays={(v) => setMetaDraft((prev) => ({ ...prev, schedule_days: v }))}
+              authors={(metaDraft.authors as AuthorEntry[]) ?? []}
+              setAuthors={(v) => setMetaDraft((prev) => ({ ...prev, authors: v }))}
+            />
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 border-t px-5 py-3">

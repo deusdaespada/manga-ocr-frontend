@@ -24,6 +24,19 @@ export type Chapter = {
   timings?: Record<string, number>;
 };
 
+export type AuthorRole = "story" | "art" | "original" | "story_art";
+
+export type AuthorEntry = {
+  name: string;
+  role: AuthorRole;
+};
+
+export type AgeRating = "all_ages" | "10+" | "13+" | "16+" | "18+";
+
+export type ScheduleDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+export type MangaStatus = "ongoing" | "completed" | "hiatus";
+
 export type ProjectMetadata = {
   description: string;
   title_uz: string;
@@ -33,6 +46,13 @@ export type ProjectMetadata = {
   title_ko: string;
   tags: string[];
   cover_url?: string;
+  age_rating?: AgeRating;
+  rating?: number | null;
+  authors?: AuthorEntry[];
+  status?: MangaStatus;
+  year?: number | null;
+  alt_titles?: string[];
+  schedule_days?: ScheduleDay[];
 };
 
 export type Project = {
@@ -58,6 +78,13 @@ export type ProjectCreateRequest = {
   title_ja?: string;
   title_ko?: string;
   tags?: string[];
+  age_rating?: AgeRating;
+  rating?: number | null;
+  authors?: AuthorEntry[];
+  status?: MangaStatus;
+  year?: number | null;
+  alt_titles?: string[];
+  schedule_days?: ScheduleDay[];
   language?: "ja" | "ko" | "ru" | "en";
   backend?: "openai" | "ollama" | "gemini";
   ocr_backend?: "auto" | "openai" | "ollama" | "paddle" | "yolo_florence" | "yolo_gemini" | "apple_vision";
@@ -91,6 +118,13 @@ export type ProjectMetadataUpdate = {
   title_ja?: string;
   title_ko?: string;
   tags?: string[];
+  age_rating?: AgeRating;
+  rating?: number | null;
+  authors?: AuthorEntry[];
+  status?: MangaStatus;
+  year?: number | null;
+  alt_titles?: string[];
+  schedule_days?: ScheduleDay[];
 };
 
 export type Tag = {
