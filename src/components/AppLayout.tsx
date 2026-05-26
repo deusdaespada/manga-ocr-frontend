@@ -21,8 +21,26 @@ const navItems = [
 ];
 
 export default function AppLayout() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    // Default — yopiq holat. Foydalanuvchi qaroridan keyin localStorage'da saqlanadi.
+    if (typeof window === "undefined") return true;
+    const saved = window.localStorage.getItem("sidebarCollapsed");
+    if (saved === null) return true;
+    return saved === "true";
+  });
   const location = useLocation();
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem("sidebarCollapsed", String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   function isActiveRoute(to: string) {
     if (to === "/") return location.pathname === "/";
@@ -76,7 +94,7 @@ export default function AppLayout() {
         {/* Collapse toggle */}
         <div className="border-t border-sidebar-border px-2 py-2">
           <button
-            onClick={() => setCollapsed((prev) => !prev)}
+            onClick={toggleCollapsed}
             className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             {collapsed ? (

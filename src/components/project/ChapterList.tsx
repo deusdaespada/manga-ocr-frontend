@@ -198,9 +198,13 @@ export default function ChapterList({
   }
 
   async function handleBulkToggleValidated() {
-    // Faqat publish qilinmagan boblarda ishlaymiz; publish qilinganlar tegmasligi shart.
+    // Faqat tarjimasi tugagan (status === "done"), publish qilinmagan lokal boblarda ishlaymiz.
+    // OCR qilinmagan / hali jarayondagi boblar publish'ga yaroqli emas, shularni tegmaymiz.
     const eligible = chapters.filter(
-      (ch) => !isRemoteR2Chapter(ch) && !publishedChapters.includes(ch.name)
+      (ch) =>
+        !isRemoteR2Chapter(ch) &&
+        !publishedChapters.includes(ch.name) &&
+        ch.status === "done"
     );
     if (eligible.length === 0) {
       toast.info("Tasdiqlash uchun bob yo'q");
@@ -264,8 +268,9 @@ export default function ChapterList({
     (chapter) => !publishedChapters.includes(chapter.name)
   );
 
-  // Bulk validate uchun: faqat publish qilinmagan lokal boblar.
-  const bulkEligible = activeLocalChapters;
+  // Bulk validate uchun: faqat tarjimasi tugagan ("done"), publish qilinmagan lokal boblar.
+  // OCR qilinmagan yoki tarjima jarayonidagilar publish qilinishi mumkin emas — shularni hisobga olmaymiz.
+  const bulkEligible = activeLocalChapters.filter((ch) => ch.status === "done");
   const bulkValidatedCount = bulkEligible.filter((ch) => ch.is_validated).length;
   const bulkAllValidated = bulkEligible.length > 0 && bulkValidatedCount === bulkEligible.length;
   const bulkSomeValidated = bulkValidatedCount > 0 && bulkValidatedCount < bulkEligible.length;
