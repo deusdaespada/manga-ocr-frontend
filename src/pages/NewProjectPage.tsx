@@ -38,8 +38,8 @@ export default function NewProjectPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [language, setLanguage] = useState<"ja" | "ko" | "ru" | "en">("en");
   const [backend, setBackend] = useState<"openai" | "ollama" | "gemini">("gemini");
-  const [ocrBackend, setOcrBackend] = useState<OcrBackendValue>("yolo_florence");
-  const [inpaintBackend, setInpaintBackend] = useState<InpaintBackendValue>("migan");
+  const [ocrBackend, setOcrBackend] = useState<OcrBackendValue>("apple_vision");
+  const [inpaintBackend, setInpaintBackend] = useState<InpaintBackendValue>("opencv");
   const [translatorModel, setTranslatorModel] = useState("");
   const [modelsMap, setModelsMap] = useState<TranslatorModelsMap>({});
   const [folder, setFolder] = useState("");
