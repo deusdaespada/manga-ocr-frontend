@@ -10,6 +10,7 @@ import {
   GripVertical,
   Wand2,
   Scissors,
+  Layers,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -36,6 +37,7 @@ import { api } from "../lib/api";
 import type { PageInfo } from "../lib/types";
 import { Button } from "../components/ui/button";
 import SplitModal from "../components/SplitModal";
+import BulkIndexDeleteModal from "../components/project/BulkIndexDeleteModal";
 
 type Mode = "reorder" | "merge";
 
@@ -280,6 +282,9 @@ export default function ReorderPage() {
   const [merging, setMerging] = useState(false);
   const [autoMerging, setAutoMerging] = useState(false);
   const [splitModalFile, setSplitModalFile] = useState<string | null>(null);
+
+  // Bulk (barcha boblardan index bo'yicha) o'chirish modali
+  const [bulkDeleteIndex, setBulkDeleteIndex] = useState<number | null>(null);
 
   // Mode
   const [mode, setMode] = useState<Mode>("merge");
@@ -529,6 +534,14 @@ export default function ReorderPage() {
     if (target) setSplitModalFile(target);
   }
 
+  function handleBulkIndexDelete() {
+    const target = selected.length === 1 ? selected[0] : rangeStart;
+    if (!target) return;
+    const idx = pages.findIndex((p) => p.filename === target);
+    if (idx < 0) return;
+    setBulkDeleteIndex(idx);
+  }
+
   async function handleSplitConfirm(cutLines: number[]) {
     if (!manga || !chapter || !splitModalFile) return;
     const res = await api.splitImage(manga, chapter, splitModalFile, cutLines);
@@ -699,6 +712,18 @@ export default function ReorderPage() {
                     </Button>
                   )}
 
+                  {splitTarget && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkIndexDelete}
+                      title="Barcha boblardan shu indexdagi rasmni o'chirish"
+                    >
+                      <Layers className="mr-1.5 h-3.5 w-3.5" />
+                      Barcha boblardan
+                    </Button>
+                  )}
+
                   <Button
                     variant="destructive"
                     size="sm"
@@ -786,6 +811,18 @@ export default function ReorderPage() {
           />
         );
       })()}
+
+      {/* Barcha boblardan index bo'yicha o'chirish modali */}
+      {bulkDeleteIndex !== null && (
+        <BulkIndexDeleteModal
+          open={bulkDeleteIndex !== null}
+          manga={manga}
+          targetIndex={bulkDeleteIndex}
+          currentTotal={pages.length}
+          onClose={() => setBulkDeleteIndex(null)}
+          onDeleted={() => loadPages(true)}
+        />
+      )}
     </DndContext>
   );
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api } from "../lib/api";
 import type { GenreOption, Project, ProjectMetadata, ProjectSettings, WsMessage, AutoPilotConfig } from "../lib/types";
 import { useActiveJobsWatcher, useAutoPilotWebSocket, useDownloadJobsWatcher, useJobWebSocket, usePublishWebSocket, type DownloadJobsState, type JobFinishInfo } from "../lib/ws";
+import { clearProgress, loadProgress, setProgress } from "../lib/progressStore";
 import ProjectHeader from "../components/project/ProjectHeader";
 import ChapterList from "../components/project/ChapterList";
 import MetadataSidebar from "../components/project/MetadataSidebar";
@@ -298,6 +299,11 @@ export default function ProjectPage() {
         setTranslateJobId(res.job_id);
         setTranslateMessage("Tarjima boshlandi...");
         setTranslateProgress(0);
+        setProgress(manga, "translate", {
+          jobId: res.job_id,
+          progress: 0,
+          message: "Tarjima boshlandi...",
+        });
       }
       toast.success("Tarjima boshlandi");
       const updated = await api.getProject(manga);
@@ -316,6 +322,18 @@ export default function ProjectPage() {
     if (msg.type === "log") {
       if (typeof msg.progress === "number") setTranslateProgress(msg.progress);
       if (msg.message) setTranslateMessage(msg.message);
+      if (manga) {
+        setTranslateJobId((id) => {
+          if (id) {
+            setProgress(manga, "translate", {
+              jobId: id,
+              progress: typeof msg.progress === "number" ? msg.progress : 0,
+              message: msg.message || "",
+            });
+          }
+          return id;
+        });
+      }
     } else if (msg.type === "done") {
       const chapters = (msg as { chapters?: number }).chapters;
       const cost = (msg as { cost_usd?: number }).cost_usd;
@@ -326,24 +344,34 @@ export default function ProjectPage() {
       setTranslateJobId(null);
       setTranslateProgress(0);
       setTranslateMessage("");
-      if (manga) api.getProject(manga).then(setProject).catch(() => {});
+      if (manga) {
+        clearProgress(manga, "translate");
+        api.getProject(manga).then(setProject).catch(() => {});
+      }
     } else if (msg.type === "error") {
       toast.error(`Tarjima xato: ${msg.message}`);
       setTranslateJobId(null);
       setTranslateProgress(0);
       setTranslateMessage("");
-      if (manga) api.getProject(manga).then(setProject).catch(() => {});
+      if (manga) {
+        clearProgress(manga, "translate");
+        api.getProject(manga).then(setProject).catch(() => {});
+      }
     } else if (msg.type === "cancelled") {
       toast.info("Tarjima bekor qilindi");
       setTranslateJobId(null);
       setTranslateProgress(0);
       setTranslateMessage("");
-      if (manga) api.getProject(manga).then(setProject).catch(() => {});
+      if (manga) {
+        clearProgress(manga, "translate");
+        api.getProject(manga).then(setProject).catch(() => {});
+      }
     }
   }, [manga]);
 
   const handleTranslateClose = useCallback(() => {
-    // WS uzilsa state tozalash
+    // WS uzilsa state tozalash. localStorage snapshot saqlanadi — job hali
+    // ishlayotgan bo'lishi mumkin, qayta mount/refreshda tiklanadi.
     setTranslateJobId(null);
     setTranslateProgress(0);
     setTranslateMessage("");
@@ -357,6 +385,23 @@ export default function ProjectPage() {
       setPublishProgress(msg.progress);
       setPublishMessage(msg.message);
       if (msg.uploaded_mb != null) setPublishUploadedMb(msg.uploaded_mb);
+      if (manga) {
+        setPublishId((id) => {
+          setPublishingTarget((target) => {
+            if (id && target) {
+              setProgress(manga, "publish", {
+                publishId: id,
+                target,
+                progress: msg.progress,
+                message: msg.message,
+                uploadedMb: msg.uploaded_mb ?? 0,
+              });
+            }
+            return target;
+          });
+          return id;
+        });
+      }
     } else if (msg.type === "done") {
       const parts: string[] = [];
       if (msg.published_chapters) parts.push(`${msg.published_chapters} bob`);
@@ -371,6 +416,7 @@ export default function ProjectPage() {
       setPublishingTarget(null);
       // Refresh project
       if (manga) {
+        clearProgress(manga, "publish");
         api.getProject(manga).then(setProject).catch(() => {});
       }
     } else if (msg.type === "error") {
@@ -380,6 +426,7 @@ export default function ProjectPage() {
       setPublishMessage("");
       setPublishUploadedMb(0);
       setPublishingTarget(null);
+      if (manga) clearProgress(manga, "publish");
     }
   }, [manga]);
 
@@ -396,6 +443,40 @@ export default function ProjectPage() {
 
   usePublishWebSocket(publishId, handlePublishMessage, handlePublishClose);
 
+  // Sahifa yuklanganda (refresh / boshqa page'dan qaytish) saqlangan
+  // progressni tiklaymiz. Tarjima uchun job hali tirikligini tekshiramiz;
+  // publish uchun snapshot tiklanib, WS qayta ulanadi.
+  useEffect(() => {
+    if (!manga) return;
+    const snap = loadProgress(manga);
+    if (!snap) return;
+
+    if (snap.translate) {
+      const { jobId, progress, message } = snap.translate;
+      api
+        .getJob(jobId)
+        .then((job) => {
+          if (job.status === "running") {
+            setTranslateJobId(jobId);
+            setTranslateProgress(progress);
+            setTranslateMessage(message);
+          } else {
+            clearProgress(manga, "translate");
+          }
+        })
+        .catch(() => clearProgress(manga, "translate"));
+    }
+
+    if (snap.publish) {
+      const { publishId: pid, target, progress, message, uploadedMb } = snap.publish;
+      setPublishingTarget(target);
+      setPublishProgress(progress);
+      setPublishMessage(message);
+      setPublishUploadedMb(uploadedMb);
+      setPublishId(pid); // WS qayta ulanadi
+    }
+  }, [manga]);
+
   // ====== Auto Pilot ======
   // Sahifa yuklanganda joriy AP'ni qayta ulash (reload-safe)
   useEffect(() => {
@@ -403,11 +484,20 @@ export default function ProjectPage() {
     api.getActiveAutoPilot(manga).then((res) => {
       if (res.active && res.auto_pilot_id) {
         setAutoPilotId(res.auto_pilot_id);
+        const snap = loadProgress(manga)?.autoPilot;
         if (res.state) {
           setAutoPilotStage(res.state.current_stage);
           setAutoPilotProgress(res.state.stage_progress);
           setAutoPilotFailed(res.state.failed_chapters);
+          // Backend'da xabar matni saqlanmaydi — oxirgi snapshot'dan tiklaymiz.
+          if (snap) {
+            setAutoPilotMessage(snap.message);
+            setAutoPilotChapter(snap.chapter);
+          }
         }
+      } else {
+        // Faol emas — eski snapshot'ni tozalaymiz.
+        clearProgress(manga, "autoPilot");
       }
     }).catch(() => {});
   }, [manga]);
@@ -421,6 +511,23 @@ export default function ProjectPage() {
       const ch = (msg as { chapter?: string }).chapter;
       if (ch) setAutoPilotChapter(ch);
       else if (msg.type === "stage_started") setAutoPilotChapter(null);
+      if (manga) {
+        setAutoPilotId((id) => {
+          if (id) {
+            setAutoPilotChapter((curChapter) => {
+              setProgress(manga, "autoPilot", {
+                autoPilotId: id,
+                stage: stageMsg.stage ?? null,
+                progress: typeof stageMsg.progress === "number" ? stageMsg.progress : 0,
+                message: stageMsg.message || "",
+                chapter: curChapter,
+              });
+              return curChapter;
+            });
+          }
+          return id;
+        });
+      }
     } else if (msg.type === "done") {
       const failed = (msg as { failed_chapters?: string[] }).failed_chapters || [];
       const stages = (msg as { stages_completed?: string[] }).stages_completed || [];
@@ -436,6 +543,7 @@ export default function ProjectPage() {
       setAutoPilotMessage("");
       setAutoPilotChapter(null);
       if (manga) {
+        clearProgress(manga, "autoPilot");
         api.getProject(manga).then(setProject).catch(() => {});
       }
     } else if (msg.type === "cancelled") {
@@ -447,6 +555,7 @@ export default function ProjectPage() {
       setAutoPilotChapter(null);
       setAutoPilotStopping(false);
       if (manga) {
+        clearProgress(manga, "autoPilot");
         api.getProject(manga).then(setProject).catch(() => {});
       }
     } else if (msg.type === "error") {
@@ -457,6 +566,7 @@ export default function ProjectPage() {
       setAutoPilotMessage("");
       setAutoPilotChapter(null);
       if (manga) {
+        clearProgress(manga, "autoPilot");
         api.getProject(manga).then(setProject).catch(() => {});
       }
     }
@@ -486,6 +596,13 @@ export default function ProjectPage() {
       setAutoPilotChapter(null);
       setAutoPilotFailed([]);
       setAutoPilotModalOpen(false);
+      setProgress(manga, "autoPilot", {
+        autoPilotId: res.auto_pilot_id,
+        stage: null,
+        progress: 0,
+        message: "Auto Pilot boshlandi",
+        chapter: null,
+      });
       toast.success("Auto Pilot boshlandi");
     } catch (e) {
       toast.error((e as Error).message);
@@ -519,12 +636,19 @@ export default function ProjectPage() {
       setPublishProgress(0);
       const count = res.chapters_to_publish ?? 0;
       const pages = res.pages_to_publish ?? 0;
-      setPublishMessage(
+      const startMsg =
         count > 0
           ? `Publish boshlanmoqda... (${count} bob, ${pages} sahifa)`
-          : "Publish boshlanmoqda..."
-      );
+          : "Publish boshlanmoqda...";
+      setPublishMessage(startMsg);
       setPublishUploadedMb(0);
+      setProgress(manga, "publish", {
+        publishId: res.publish_id,
+        target: "manga",
+        progress: 0,
+        message: startMsg,
+        uploadedMb: 0,
+      });
       toast.success(
         count > 0
           ? `Publish boshlandi: ${count} bob`
@@ -550,6 +674,13 @@ export default function ProjectPage() {
       setPublishProgress(0);
       setPublishMessage(`${chapter}-bob publish boshlanmoqda...`);
       setPublishUploadedMb(0);
+      setProgress(manga, "publish", {
+        publishId: res.publish_id,
+        target: chapter,
+        progress: 0,
+        message: `${chapter}-bob publish boshlanmoqda...`,
+        uploadedMb: 0,
+      });
     } catch (e) {
       const msg = (e as Error).message;
       toast.error(`${chapter}-bob publish: ${msg}`);
