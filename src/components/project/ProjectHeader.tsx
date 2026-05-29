@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Plus, Languages, Trash2, Loader2, Upload, Rocket } from "lucide-react";
+import { ArrowLeft, Plus, Languages, Trash2, Loader2, Upload, Rocket, Link2, BookDown, Unlink } from "lucide-react";
 
 import { Button } from "../ui/button";
 
@@ -11,6 +11,10 @@ interface ProjectHeaderProps {
   hasPublishableChapters: boolean;
   isPublishing: boolean;
   isAutoPiloting: boolean;
+  mangaLibSlug?: string | null;
+  onAttachMangaLib: () => void;
+  onOpenMangaLibChapters: () => void;
+  onDetachMangaLib: () => void;
   onTranslate: () => void;
   onPublish: () => void;
   onAutoPilot: () => void;
@@ -25,11 +29,16 @@ export default function ProjectHeader({
   hasPublishableChapters,
   isPublishing,
   isAutoPiloting,
+  mangaLibSlug,
+  onAttachMangaLib,
+  onOpenMangaLibChapters,
+  onDetachMangaLib,
   onTranslate,
   onPublish,
   onAutoPilot,
   onDelete,
 }: ProjectHeaderProps) {
+  const hasMangaLib = Boolean(mangaLibSlug);
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -49,6 +58,41 @@ export default function ProjectHeader({
             Bob qo'shish
           </Button>
         </Link>
+
+        {/* MangaLib link */}
+        {hasMangaLib ? (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenMangaLibChapters}
+              className="gap-1.5"
+            >
+              <BookDown className="h-3.5 w-3.5" />
+              MangaLib boblari
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onDetachMangaLib}
+              className="gap-1.5"
+              title="MangaLib linkini uzish"
+            >
+              <Unlink className="h-3.5 w-3.5" />
+              Linkni uzish
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onAttachMangaLib}
+            className="gap-1.5"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            MangaLib link biriktirish
+          </Button>
+        )}
 
         {/* Auto Pilot — barcha bosqichlarni ketma-ket avtomatik bajarish */}
         <Button

@@ -4,7 +4,7 @@ import { toast } from "sonner";
 
 import { api } from "../lib/api";
 import type { GenreOption, Project, ProjectMetadata, ProjectSettings, WsMessage, AutoPilotConfig } from "../lib/types";
-import { useActiveJobsWatcher, useAutoPilotWebSocket, useJobWebSocket, usePublishWebSocket, type JobFinishInfo } from "../lib/ws";
+import { useActiveJobsWatcher, useAutoPilotWebSocket, useDownloadJobsWatcher, useJobWebSocket, usePublishWebSocket, type DownloadJobsState, type JobFinishInfo } from "../lib/ws";
 import ProjectHeader from "../components/project/ProjectHeader";
 import ChapterList from "../components/project/ChapterList";
 import MetadataSidebar from "../components/project/MetadataSidebar";
@@ -14,6 +14,8 @@ import CoverCropModal from "../components/project/CoverCropModal";
 import ChapterThumbnailModal from "../components/project/ChapterThumbnailModal";
 import AutoPilotModal from "../components/project/AutoPilotModal";
 import AutoPilotProgress from "../components/project/AutoPilotProgress";
+import MangaLibAttachModal from "../components/project/MangaLibAttachModal";
+import MangaLibChaptersModal from "../components/project/MangaLibChaptersModal";
 import { Progress } from "../components/ui/progress";
 
 export default function ProjectPage() {
@@ -101,6 +103,14 @@ export default function ProjectPage() {
   const [autoPilotFailed, setAutoPilotFailed] = useState<string[]>([]);
   const [autoPilotStopping, setAutoPilotStopping] = useState(false);
 
+  // MangaLib state
+  const [mangaLibAttachOpen, setMangaLibAttachOpen] = useState(false);
+  const [mangaLibChaptersOpen, setMangaLibChaptersOpen] = useState(false);
+  // Faol download joblar — tugaganda toast + refresh uchun kuzatiladi.
+  const [mangaLibJobs, setMangaLibJobs] = useState<string[]>([]);
+  const [mangaLibDownload, setMangaLibDownload] = useState<DownloadJobsState | null>(null);
+  const mangaLibSlug = project?.metadata?.mangalib_slug ?? null;
+
   const chapters = project?.chapters || [];
   // OCR natijasi bor (ocr_done) yoki tarjima qilingan (done) — ikkala holatda
   // ham qayta tarjima qilish mumkin.
@@ -138,6 +148,77 @@ export default function ProjectPage() {
   }, [manga]);
 
   useActiveJobsWatcher(chapters, handleJobFinished);
+
+  // ====== MangaLib download joblarini kuzatish ======
+  const handleMangaLibUpdate = useCallback((state: DownloadJobsState) => {
+    setMangaLibDownload(state);
+  }, []);
+
+  const handleMangaLibAllFinished = useCallback(
+    (failed: number) => {
+      if (failed > 0) {
+        toast.warning(`MangaLib yuklash tugadi: ${failed} bobda xatolik`);
+      } else {
+        toast.success("MangaLib yuklash tugadi");
+      }
+      setMangaLibJobs([]);
+      setMangaLibDownload(null);
+      if (manga) {
+        api.getProject(manga).then(setProject).catch(() => {});
+      }
+    },
+    [manga],
+  );
+
+  useDownloadJobsWatcher(mangaLibJobs, handleMangaLibUpdate, handleMangaLibAllFinished);
+
+  function handleMangaLibDownloadStarted(jobIds: string[]) {
+    setMangaLibChaptersOpen(false);
+    if (jobIds.length === 0) {
+      toast.info("Yuklab olinadigan yangi bob topilmadi");
+      return;
+    }
+    setMangaLibJobs(jobIds);
+    setMangaLibDownload({
+      total: jobIds.length,
+      finished: 0,
+      failed: 0,
+      progress: 0,
+      lastMessage: "Yuklash boshlandi...",
+      active: true,
+    });
+  }
+
+  async function handleDetachMangaLib() {
+    if (!manga) return;
+    if (!confirm("MangaLib linkini uzmoqchimisiz? Saqlangan bob ro'yxati tozalanadi.")) {
+      return;
+    }
+    try {
+      await api.detachMangaLib(manga);
+      toast.success("MangaLib link uzildi");
+      const updated = await api.getProject(manga);
+      setProject(updated);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function handleMangaLibAttached() {
+    setMangaLibAttachOpen(false);
+    if (!manga) return;
+    try {
+      const updated = await api.getProject(manga);
+      setProject(updated);
+      if (updated.metadata) setMetaDraft({ ...updated.metadata });
+      if (updated.settings) {
+        setSettings((prev) => ({ ...prev, language: updated.settings!.language }));
+      }
+    } catch {
+      // ignore
+    }
+  }
+
 
   async function handleSave() {
     if (!manga) return;
@@ -488,6 +569,10 @@ export default function ProjectPage() {
         hasPublishableChapters={hasPublishableChapters}
         isPublishing={isPublishing}
         isAutoPiloting={autoPilotId !== null}
+        mangaLibSlug={mangaLibSlug}
+        onAttachMangaLib={() => setMangaLibAttachOpen(true)}
+        onOpenMangaLibChapters={() => setMangaLibChaptersOpen(true)}
+        onDetachMangaLib={handleDetachMangaLib}
         onTranslate={handleTranslateManga}
         onPublish={handlePublishManga}
         onAutoPilot={() => setAutoPilotModalOpen(true)}
@@ -519,6 +604,31 @@ export default function ProjectPage() {
           onStop={handleStopAutoPilot}
           stopping={autoPilotStopping}
         />
+      )}
+
+      {/* MangaLib download progress */}
+      {mangaLibDownload && mangaLibDownload.active && (
+        <div className="rounded-lg border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">
+              ⬇️ MangaLib yuklash ({mangaLibDownload.finished}/{mangaLibDownload.total} bob)
+            </span>
+            <span className="text-xs font-medium tabular-nums">
+              {mangaLibDownload.progress}%
+            </span>
+          </div>
+          <Progress value={mangaLibDownload.progress} className="h-2 mb-1.5" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground line-clamp-1">
+              {mangaLibDownload.lastMessage || "Boshlanmoqda..."}
+            </span>
+            {mangaLibDownload.failed > 0 && (
+              <span className="text-xs text-destructive">
+                {mangaLibDownload.failed} xato
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Publish progress bar */}
@@ -639,8 +749,24 @@ export default function ProjectPage() {
         open={autoPilotModalOpen}
         starting={autoPilotStarting}
         manga={manga!}
+        hasMangaLib={Boolean(mangaLibSlug)}
         onClose={() => setAutoPilotModalOpen(false)}
         onStart={handleStartAutoPilot}
+      />
+
+      <MangaLibAttachModal
+        open={mangaLibAttachOpen}
+        manga={manga!}
+        onClose={() => setMangaLibAttachOpen(false)}
+        onAttached={handleMangaLibAttached}
+      />
+
+      <MangaLibChaptersModal
+        open={mangaLibChaptersOpen}
+        manga={manga!}
+        publishedChapters={publishedChapters}
+        onClose={() => setMangaLibChaptersOpen(false)}
+        onDownloadStarted={handleMangaLibDownloadStarted}
       />
     </div>
   );

@@ -21,6 +21,11 @@ import type {
   MangaDexSearchParams,
   MangaDexSearchResponse,
   MangaDexTag,
+  MangaLibAttachResponse,
+  MangaLibChaptersResponse,
+  MangaLibDownloadRequest,
+  MangaLibDownloadResponse,
+  MangaLibSeries,
   OcrBackendInfo,
   InpaintBackendInfo,
   PageInfo,
@@ -512,6 +517,52 @@ export const api = {
       }),
     }).then(handle<MangaDexImportMangaResponse>);
   },
+
+  // ── MangaLib ────────────────────────────────────────────────────────
+
+  resolveMangaLib(urlOrSlug: string): Promise<MangaLibSeries> {
+    return fetch("/api/mangalib/resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url_or_slug: urlOrSlug }),
+    }).then(handle<MangaLibSeries>);
+  },
+  attachMangaLib(
+    manga: string,
+    urlOrSlug: string,
+    setLanguageRu = true,
+  ): Promise<MangaLibAttachResponse> {
+    return fetch(`/api/mangalib/${encodeURIComponent(manga)}/attach`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url_or_slug: urlOrSlug, set_language_ru: setLanguageRu }),
+    }).then(handle<MangaLibAttachResponse>);
+  },
+  detachMangaLib(manga: string): Promise<{ ok: boolean }> {
+    return fetch(`/api/mangalib/${encodeURIComponent(manga)}/attach`, {
+      method: "DELETE",
+    }).then(handle<{ ok: boolean }>);
+  },
+  getMangaLibChapters(manga: string): Promise<MangaLibChaptersResponse> {
+    return fetch(`/api/mangalib/${encodeURIComponent(manga)}/chapters`)
+      .then(handle<MangaLibChaptersResponse>);
+  },
+  syncMangaLib(manga: string): Promise<{ ok: boolean; chapter_count: number }> {
+    return fetch(`/api/mangalib/${encodeURIComponent(manga)}/sync`, {
+      method: "POST",
+    }).then(handle<{ ok: boolean; chapter_count: number }>);
+  },
+  downloadMangaLib(
+    manga: string,
+    payload: MangaLibDownloadRequest,
+  ): Promise<MangaLibDownloadResponse> {
+    return fetch(`/api/mangalib/${encodeURIComponent(manga)}/download`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(handle<MangaLibDownloadResponse>);
+  },
+
   startAutoPilot(manga: string, config: AutoPilotConfig): Promise<AutoPilotStartResponse> {
     return fetch(`/api/auto-pilot/${encodeURIComponent(manga)}/start`, {
       method: "POST",

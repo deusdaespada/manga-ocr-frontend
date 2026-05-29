@@ -192,3 +192,103 @@ export function useActiveJobsWatcher(
     };
   }, []);
 }
+
+export type DownloadJobsState = {
+  total: number;
+  finished: number;
+  failed: number;
+  progress: number;
+  lastMessage: string;
+  active: boolean;
+};
+
+/**
+ * Bir nechta download job_id larga bir vaqtda WS ulanib, umumiy
+ * progressni hisoblaydi. Barchasi tugaganda (done/error/cancelled)
+ * `onAllFinished` chaqiriladi.
+ *
+ * MangaLib download joblar uchun ishlatiladi (mavjud /ws/jobs/{id}).
+ */
+export function useDownloadJobsWatcher(
+  jobIds: string[],
+  onUpdate: (state: DownloadJobsState) => void,
+  onAllFinished?: (failed: number) => void,
+) {
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const onAllFinishedRef = useRef(onAllFinished);
+  onAllFinishedRef.current = onAllFinished;
+
+  // jobIds ni barqaror kalitga aylantiramiz (har renderda yangi massiv kelishi mumkin)
+  const key = jobIds.join(",");
+
+  useEffect(() => {
+    const ids = key ? key.split(",") : [];
+    if (ids.length === 0) return;
+
+    const sockets: WebSocket[] = [];
+    const progressById = new Map<string, number>();
+    const doneSet = new Set<string>();
+    let failed = 0;
+    let lastMessage = "";
+
+    const emit = () => {
+      let sum = 0;
+      for (const id of ids) sum += progressById.get(id) ?? 0;
+      const progress = Math.round(sum / ids.length);
+      const active = doneSet.size < ids.length;
+      onUpdateRef.current({
+        total: ids.length,
+        finished: doneSet.size,
+        failed,
+        progress,
+        lastMessage,
+        active,
+      });
+      if (!active && onAllFinishedRef.current) {
+        onAllFinishedRef.current(failed);
+      }
+    };
+
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    for (const jobId of ids) {
+      const ws = new WebSocket(`${proto}//${location.host}/ws/jobs/${jobId}`);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data) as WsMessage;
+          if (data.type === "log") {
+            if (typeof data.progress === "number" && data.progress > 0) {
+              progressById.set(jobId, data.progress);
+            }
+            if (data.message) lastMessage = data.message;
+          } else if (data.type === "done") {
+            progressById.set(jobId, 100);
+            doneSet.add(jobId);
+            if (data.message) lastMessage = data.message;
+          } else if (data.type === "error" || data.type === "cancelled") {
+            progressById.set(jobId, 100);
+            doneSet.add(jobId);
+            if (data.type === "error") failed += 1;
+            if (data.message) lastMessage = data.message;
+          }
+          emit();
+        } catch {
+          // ignore
+        }
+      };
+      ws.onclose = () => {
+        // Yopilganda ham tugagan deb hisoblaymiz (qayta ulanmaydi)
+        if (!doneSet.has(jobId)) {
+          progressById.set(jobId, 100);
+          doneSet.add(jobId);
+          emit();
+        }
+      };
+      sockets.push(ws);
+    }
+
+    return () => {
+      for (const ws of sockets) ws.close();
+    };
+  }, [key]);
+}

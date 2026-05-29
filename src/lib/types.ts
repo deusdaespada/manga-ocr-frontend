@@ -56,6 +56,8 @@ export type ProjectMetadata = {
   year?: number | null;
   alt_titles?: string[];
   schedule_days?: ScheduleDay[];
+  mangadex_id?: string | null;
+  mangalib_slug?: string | null;
 };
 
 export type Project = {
@@ -396,6 +398,7 @@ export type PublishStartResponse = {
 };
 
 export type AutoPilotConfig = {
+  enable_mangalib_download?: boolean;
   enable_auto_merge: boolean;
   enable_ocr: boolean;
   enable_translate: boolean;
@@ -408,6 +411,7 @@ export type AutoPilotStartResponse = {
   auto_pilot_id: string;
   manga: string;
   config: {
+    enable_mangalib_download?: boolean;
     enable_auto_merge: boolean;
     enable_ocr: boolean;
     enable_translate: boolean;
@@ -419,7 +423,7 @@ export type AutoPilotState = {
   id: string;
   manga: string;
   status: "running" | "done" | "done_with_errors" | "failed" | "cancelled";
-  current_stage: "auto_merge" | "ocr" | "translate" | "publish" | null;
+  current_stage: "mangalib_download" | "auto_merge" | "ocr" | "translate" | "publish" | null;
   stages_completed: string[];
   total_chapters: number;
   completed_chapters: number;
@@ -551,6 +555,74 @@ export type MangaDexImportResponse = {
 };
 
 export type MangaDexImportMangaResponse = {
+  status: "started";
+  job_ids: string[];
+  total: number;
+};
+
+
+// ── MangaLib ───────────────────────────────────────────────────────────
+
+export type MangaLibSeries = {
+  slug: string;
+  title: string;
+  name: string;
+  rus_name: string;
+  eng_name: string;
+  summary: string;
+  cover_url: string;
+  genres: string[];
+  tags: string[];
+  authors: string[];
+  artists: string[];
+  type_label: string;
+  status: string;
+  age_rating: string;
+  year: number | null;
+  chapter_count: number;
+  first_chapter: number | null;
+  last_chapter: number | null;
+};
+
+export type MangaLibChapterEntry = {
+  number: number;
+  volume: number;
+  name: string;
+  chapter_id: string;
+  imported: boolean;
+  is_new: boolean;
+};
+
+export type MangaLibChaptersResponse = {
+  mangalib_slug: string;
+  synced_at: string;
+  max_local_chapter: number | null;
+  total: number;
+  results: MangaLibChapterEntry[];
+};
+
+export type MangaLibAttachResponse = {
+  ok: boolean;
+  mangalib_slug: string;
+  cover_url: string;
+  title: string;
+  chapter_count: number;
+  chapters: Array<{
+    number: number;
+    volume: number;
+    name: string;
+    chapter_id: string;
+  }>;
+};
+
+export type MangaLibDownloadRequest = {
+  only_new?: boolean;
+  from_chapter?: number | null;
+  to_chapter?: number | null;
+  chapter_numbers?: number[];
+};
+
+export type MangaLibDownloadResponse = {
   status: "started";
   job_ids: string[];
   total: number;

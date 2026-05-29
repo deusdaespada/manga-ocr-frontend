@@ -14,6 +14,7 @@ interface AutoPilotProgressProps {
 }
 
 const STAGE_LABEL: Record<string, string> = {
+  mangalib_download: "⬇️ MangaLib yuklash",
   auto_merge: "Auto Merge",
   ocr: "OCR",
   translate: "Tarjima",

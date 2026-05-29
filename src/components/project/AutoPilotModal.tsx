@@ -9,6 +9,7 @@ interface AutoPilotModalProps {
   open: boolean;
   starting: boolean;
   manga: string;
+  hasMangaLib?: boolean;
   onClose: () => void;
   onStart: (config: AutoPilotConfig) => void;
 }
@@ -21,6 +22,7 @@ function loadConfig(): AutoPilotConfig {
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AutoPilotConfig>;
       return {
+        enable_mangalib_download: parsed.enable_mangalib_download ?? false,
         enable_auto_merge: parsed.enable_auto_merge ?? true,
         enable_ocr: parsed.enable_ocr ?? true,
         enable_translate: parsed.enable_translate ?? false,
@@ -33,6 +35,7 @@ function loadConfig(): AutoPilotConfig {
     // ignore
   }
   return {
+    enable_mangalib_download: false,
     enable_auto_merge: true,
     enable_ocr: true,
     enable_translate: false,
@@ -46,6 +49,7 @@ export default function AutoPilotModal({
   open,
   starting,
   manga,
+  hasMangaLib = false,
   onClose,
   onStart,
 }: AutoPilotModalProps) {
@@ -86,6 +90,7 @@ export default function AutoPilotModal({
   };
 
   const noStageEnabled =
+    !config.enable_mangalib_download &&
     !config.enable_auto_merge &&
     !config.enable_ocr &&
     !config.enable_translate &&
@@ -121,6 +126,14 @@ export default function AutoPilotModal({
           </p>
 
           <div className="space-y-3 rounded-md border bg-muted/40 p-3">
+            <StageRow
+              label="MangaLib: yangi boblarni yuklash"
+              description="Saqlangan katalogdan yangi boblarni avtomatik download"
+              checked={config.enable_mangalib_download ?? false}
+              onChange={(v) => update("enable_mangalib_download", v)}
+              disabled={!hasMangaLib}
+              disabledHint="Avval MangaLib link biriktiring"
+            />
             <StageRow
               label="Auto Merge"
               description="Yuklangan boblarni avtomatik tartiblash"
