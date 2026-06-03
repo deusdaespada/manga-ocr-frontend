@@ -81,7 +81,7 @@ const RegionItem = memo(function RegionItem({
   const draftFontStyle = draft.fontStyle ?? serverFontStyle;
   const serverFontColor = r.font_color || "#111827";
   const draftFontColor = draft.fontColor ?? serverFontColor;
-  const serverFontFamily = r.font_family || "Comic Neue";
+  const serverFontFamily = r.font_family || "Anime Ace";
   const draftFontFamily = draft.fontFamily ?? serverFontFamily;
   const serverStrokeColor = r.font_stroke_color || "";
   const draftStrokeColor = draft.fontStrokeColor ?? serverStrokeColor;
@@ -131,7 +131,7 @@ const RegionItem = memo(function RegionItem({
                         fontWeight: reg.font_weight || "bold",
                         fontStyle: reg.font_style || "normal",
                         fontColor: reg.font_color || "#111827",
-                        fontFamily: reg.font_family || "Comic Neue",
+                        fontFamily: reg.font_family || "Anime Ace",
                         fontStrokeColor: reg.font_stroke_color || "",
                         fontStrokeWidth: reg.font_stroke_width || 0,
                       };

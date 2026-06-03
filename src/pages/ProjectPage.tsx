@@ -38,6 +38,10 @@ export default function ProjectPage() {
     drop_first_if_h: 0,
     drop_last_if_w: 0,
     drop_last_if_h: 0,
+    font_dialogue: "Anime Ace",
+    font_sfx: "Bangers",
+    font_narration: "Manga Temple",
+    font_clean: "Nunito",
   });
   const [saving, setSaving] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
@@ -76,6 +80,10 @@ export default function ProjectPage() {
             drop_first_if_h: data.settings.drop_first_if_h ?? 0,
             drop_last_if_w: data.settings.drop_last_if_w ?? 0,
             drop_last_if_h: data.settings.drop_last_if_h ?? 0,
+            font_dialogue: data.settings.font_dialogue || "Anime Ace",
+            font_sfx: data.settings.font_sfx || "Bangers",
+            font_narration: data.settings.font_narration || "Manga Temple",
+            font_clean: data.settings.font_clean || "Nunito",
           });
         }
         if (data.metadata) {

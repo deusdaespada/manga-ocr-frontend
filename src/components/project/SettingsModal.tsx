@@ -3,6 +3,7 @@ import { X, Save, Loader2, Settings2 } from "lucide-react";
 
 import { api } from "../../lib/api";
 import type { ProjectSettings, TranslatorModelInfo, TranslatorModelsMap } from "../../lib/types";
+import { MANGA_FONTS, ROLE_DEFAULTS } from "../../lib/fonts";
 import OcrBackendSelect from "../OcrBackendSelect";
 import InpaintBackendSelect from "../InpaintBackendSelect";
 import { Button } from "../ui/button";
@@ -26,6 +27,44 @@ interface SettingsModalProps {
   setForceClean: (v: boolean) => void;
   onSave: () => void;
   onClose: () => void;
+}
+
+const FONT_CATEGORY_LABELS: Record<string, string> = {
+  comic: "Dialog",
+  sfx: "SFX / FX",
+  narration: "Narration",
+  clean: "Oddiy",
+};
+
+function FontRoleSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Font" />
+        </SelectTrigger>
+        <SelectContent>
+          {MANGA_FONTS.map((f) => (
+            <SelectItem key={f.family} value={f.family}>
+              <span style={{ fontFamily: f.family }}>{f.family}</span>
+              <span className="ml-2 text-[10px] text-muted-foreground">
+                {FONT_CATEGORY_LABELS[f.category] || f.category}
+              </span>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 export default function SettingsModal({
@@ -180,6 +219,29 @@ export default function SettingsModal({
             />
             <span className="text-muted-foreground">Qora bubble aniqlash (dark bubble detection)</span>
           </label>
+          <div className="space-y-2 rounded-md border border-dashed border-primary/30 bg-primary/5 p-3">
+            <p className="text-[11px] font-medium text-primary/80">Fontlar (manga uchun default)</p>
+            <p className="text-[11px] text-muted-foreground">
+              Har rol uchun standart font. Editor sahifasida har bir matn alohida o'zgartirilishi mumkin.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <FontRoleSelect
+                label="Dialog"
+                value={settings.font_dialogue || ROLE_DEFAULTS.dialogue}
+                onChange={(v) => setSettings((prev) => ({ ...prev, font_dialogue: v }))}
+              />
+              <FontRoleSelect
+                label="SFX / FX"
+                value={settings.font_sfx || ROLE_DEFAULTS.sfx}
+                onChange={(v) => setSettings((prev) => ({ ...prev, font_sfx: v }))}
+              />
+              <FontRoleSelect
+                label="Narration"
+                value={settings.font_narration || ROLE_DEFAULTS.narration}
+                onChange={(v) => setSettings((prev) => ({ ...prev, font_narration: v }))}
+              />
+            </div>
+          </div>
           <div className="space-y-1.5 rounded-md border border-dashed border-amber-500/30 bg-amber-500/5 p-3">
             <p className="text-[11px] font-medium text-amber-500/80">Qayta ishlash</p>
             <label className="flex items-center gap-2 text-xs">

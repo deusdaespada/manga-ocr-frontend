@@ -171,6 +171,12 @@ export type ProjectSettings = {
   drop_first_if_h: number;
   drop_last_if_w: number;
   drop_last_if_h: number;
+  // Manga-darajasidagi font tanlovi (rol bo'yicha). Bo'sh bo'lsa backend
+  // default ishlatadi. Editor'da har region alohida o'zgartirilishi mumkin.
+  font_dialogue?: string;
+  font_sfx?: string;
+  font_narration?: string;
+  font_clean?: string;
 };
 
 export type TranslatorModelInfo = {
@@ -239,6 +245,8 @@ export type Region = {
   font_family?: string;
   font_stroke_color?: string;
   font_stroke_width?: number;
+  text_align?: "left" | "center" | "right";
+  tone?: string;
 };
 
 export type Page = {

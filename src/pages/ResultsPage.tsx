@@ -130,7 +130,7 @@ export default function ResultsPage() {
               fontWeight: r.font_weight || "bold",
               fontStyle: r.font_style || "normal",
               fontColor: r.font_color || "#111827",
-              fontFamily: r.font_family || "Comic Neue",
+              fontFamily: r.font_family || "Anime Ace",
               fontStrokeColor: r.font_stroke_color || "",
               fontStrokeWidth: r.font_stroke_width || 0,
             };
@@ -301,7 +301,7 @@ export default function ResultsPage() {
         const serverFontWeight = r.font_weight || "bold";
         const serverFontStyle = r.font_style || "normal";
         const serverFontColor = r.font_color || "#111827";
-        const serverFontFamily = r.font_family || "Comic Neue";
+        const serverFontFamily = r.font_family || "Anime Ace";
         const serverStrokeColor = r.font_stroke_color || "";
         const serverStrokeWidth = r.font_stroke_width || 0;
         if (
@@ -835,7 +835,10 @@ export default function ResultsPage() {
     return (
       <TranslationTextsView
         texts={texts}
+        manga={manga!}
+        chapter={chapter!}
         onBack={() => setCurrentPage(pages.length - 1)}
+        onDataUpdate={setData}
       />
     );
   }

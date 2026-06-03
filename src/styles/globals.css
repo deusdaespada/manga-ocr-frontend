@@ -2,6 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Anime Ace — manga dialog fonti (self-hosted; Google Fonts'da yo'q).
+   Backend renderer (Pillow) bilan AYNAN bir xil font — editor preview =
+   publish natijasi. Fayllar: public/fonts/. */
+@font-face {
+  font-family: "Anime Ace";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/AnimeAce-Regular.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Anime Ace";
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/AnimeAce-Italic.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Anime Ace";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/AnimeAce-Bold.ttf") format("truetype");
+}
+@font-face {
+  /* Anime Ace'da alohida bold-italic yo'q — bold faylni ishlatamiz. */
+  font-family: "Anime Ace";
+  font-style: italic;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/AnimeAce-Bold.ttf") format("truetype");
+}
+
+/* Self-hosted manga fontlar — backend renderer (Pillow) bilan AYNAN bir xil.
+   Editor preview = publish natijasi. Barcha fayllar public/fonts/. */
+
+/* Komika Text — dialog (alternativa) */
+@font-face { font-family: "Komika Text"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/KomikaText-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Komika Text"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/KomikaText-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Komika Text"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/KomikaText-Bold.ttf") format("truetype"); }
+@font-face { font-family: "Komika Text"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/KomikaText-BoldItalic.ttf") format("truetype"); }
+
+/* Manga Temple — narration / fikr */
+@font-face { font-family: "Manga Temple"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/MangaTemple-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Manga Temple"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/MangaTemple-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Manga Temple"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/MangaTemple-Bold.ttf") format("truetype"); }
+@font-face { font-family: "Manga Temple"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/MangaTemple-Bold.ttf") format("truetype"); }
+
+/* SFX / FX fontlar */
+@font-face { font-family: "Who Dares"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/WhoDares-Regular.otf") format("opentype"); }
+@font-face { font-family: "Who Dares"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/WhoDares-BoldItalic.otf") format("opentype"); }
+@font-face { font-family: "Road Rage"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/RoadRage-Regular.otf") format("opentype"); }
+@font-face { font-family: "Magma Break"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/MagmaBreak-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Magma Break"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/MagmaBreak-Brush.ttf") format("truetype"); }
+@font-face { font-family: "Outrun Future"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/OutrunFuture-Regular.otf") format("opentype"); }
+@font-face { font-family: "Outrun Future"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/OutrunFuture-Bold.otf") format("opentype"); }
+@font-face { font-family: "Outrun Future"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/OutrunFuture-BoldItalic.otf") format("opentype"); }
+@font-face { font-family: "Stupid Cupid"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/StupidCupid-Regular.otf") format("opentype"); }
+
+/* Bangers — SFX (self-hosted; oldin Google CDN edi) */
+@font-face { font-family: "Bangers"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/Bangers-Regular.ttf") format("truetype"); }
+
+/* Nunito — oddiy/universal (self-hosted) */
+@font-face { font-family: "Nunito"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/Nunito-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Nunito"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/Nunito-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Nunito"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/Nunito-Bold.ttf") format("truetype"); }
+@font-face { font-family: "Nunito"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/Nunito-BoldItalic.ttf") format("truetype"); }
+
 :root {
   /* Supabase-inspired dark theme */
   --background: 0 0% 7%;

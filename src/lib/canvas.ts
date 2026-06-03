@@ -1,7 +1,27 @@
 import type { Region } from "./types";
 
+/**
+ * Matnni qatorlarga ajratadi. Avval ANIQ yangi qatorlar (\n) bo'yicha
+ * bo'linadi (status/info panellardagi maʼnoli qator tuzilishini saqlaydi),
+ * so'ng har segment box kengligiga sig'maguncha word-wrap qilinadi.
+ * Backend `typesetter._wrap_text` bilan mos.
+ */
 export function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
-  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  for (const segment of text.split("\n")) {
+    if (!segment.trim()) {
+      lines.push("");
+      continue;
+    }
+    for (const ln of wrapSegment(ctx, segment, maxWidth)) lines.push(ln);
+  }
+  while (lines.length && lines[0] === "") lines.shift();
+  while (lines.length && lines[lines.length - 1] === "") lines.pop();
+  return lines;
+}
+
+function wrapSegment(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
+  const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
 
@@ -41,7 +61,7 @@ function buildFontString(
   // CSS font shorthand: [style] [weight] size family
   const style = fontStyle === "italic" ? "italic" : "normal";
   const weight = fontWeight === "normal" ? "400" : "bold";
-  return `${style} ${weight} ${fontSize}px '${fontFamily}', 'Comic Neue', sans-serif`;
+  return `${style} ${weight} ${fontSize}px '${fontFamily}', 'Anime Ace', sans-serif`;
 }
 
 /**
@@ -55,6 +75,23 @@ function buildFontString(
  */
 const PREFERRED_MIN_FONT = 18;
 const FILL_RATIO = 0.92;
+
+type Align = "left" | "center" | "right";
+
+/**
+ * Region uchun matn tekislashini aniqlaydi (backend `_resolve_align` bilan mos).
+ *
+ * `text_align` faqat ISHONCHLI manbalardan keladi: foydalanuvchi qo'lda
+ * o'rnatgan yoki OCR qator geometriyasidan aniqlangan (backend save bosqichida
+ * `detect_text_align_from_lines`). Bu yerda hech qanday taxmin qilinmaydi —
+ * `text_align` yo'q bo'lsa markaz (oddiy dialog bubble'lar uchun to'g'ri).
+ */
+function resolveAlign(r: Region): Align {
+  if (r.text_align === "left" || r.text_align === "center" || r.text_align === "right") {
+    return r.text_align;
+  }
+  return "center";
+}
 
 function expandBoxWithinBubble(
   ocr: { x: number; y: number; w: number; h: number },
@@ -110,7 +147,7 @@ function computeRenderBox(
   bbox: { x: number; y: number; w: number; h: number },
   bubbleBbox?: { x: number; y: number; w: number; h: number },
   text?: string,
-  fontFamily: string = "Comic Neue",
+  fontFamily: string = "Anime Ace",
   fontWeight: string = "bold",
   fontStyle: string = "normal",
 ): { x: number; y: number; w: number; h: number } {
@@ -160,7 +197,6 @@ function computeRenderBox(
 
 export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Region[]) {
   ctx.textBaseline = "top";
-  ctx.textAlign = "center";
 
   regions.forEach((r) => {
     if (!r.uz_text) return;
@@ -169,7 +205,8 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
 
     const fontWeight = r.font_weight || "bold";
     const fontStyle = r.font_style || "normal";
-    const fontFamily = r.font_family || "Comic Neue";
+    const fontFamily = r.font_family || "Anime Ace";
+    const align = resolveAlign(r);
 
     // OCR bbox asosiy rendering box, matnga moslab smart-expand qilinadi
     const box = computeRenderBox(ctx, r.bbox, r.bubble_bbox, text, fontFamily, fontWeight, fontStyle);
@@ -196,8 +233,6 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     let lineHeight = Math.floor(fontSize * 1.2);
 
     // Vertikal yoki gorizontal sig'magunicha font kichraytiriladi.
-    // Matn box ichiga to'liq sig'ishi shart — aks holda clip uni
-    // yashiradi va o'quvchi matnning bir qismini ko'rmaydi.
     const overflows = () => {
       if (lines.length * lineHeight > maxHeight) return true;
       for (const line of lines) {
@@ -205,10 +240,6 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
       }
       return false;
     };
-    // Matn box ichiga sig'maguncha font kichraytiriladi (backend
-    // renderer bilan mos). PREFERRED_MIN faqat boshlang'ich tavsiya;
-    // matn sig'masa, clip uni yashirmasligi uchun absolyut minimumgacha
-    // tushishga ruxsat beriladi.
     const minAllowed = MIN_FONT;
     while (fontSize > minAllowed && overflows()) {
       fontSize -= 1;
@@ -220,6 +251,19 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     const totalTextHeight = lines.length * lineHeight;
     const startY = box.y + padding + Math.max(0, (maxHeight - totalTextHeight) / 2);
 
+    // Tekislash bo'yicha x-anchor + textAlign
+    let anchorX: number;
+    if (align === "left") {
+      anchorX = box.x + padding;
+      ctx.textAlign = "left";
+    } else if (align === "right") {
+      anchorX = box.x + boxWidth - padding;
+      ctx.textAlign = "right";
+    } else {
+      anchorX = box.x + boxWidth / 2;
+      ctx.textAlign = "center";
+    }
+
     ctx.save();
     const rot = r.rotation || 0;
     if (rot) {
@@ -230,8 +274,7 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
       ctx.translate(-cx, -cy);
     }
     // Faqat burchaksiz matnda clip qilamiz — backend renderer burilgan matnni
-    // alohida layer'da expand=True bilan chizadi (kesmaydi). Editor preview va
-    // publish natijasi bir xil bo'lishi uchun burchakli regionда clip o'chiriladi.
+    // alohida layer'da expand=True bilan chizadi (kesmaydi).
     if (!rot) {
       ctx.beginPath();
       ctx.rect(box.x, box.y, boxWidth, boxHeight);
@@ -240,7 +283,6 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     const fontColor = r.font_color || "#111827";
     const strokeColor = r.font_stroke_color || "";
     const strokeWidth = r.font_stroke_width || 0;
-    const centerX = box.x + boxWidth / 2;
 
     // Stroke (hoshiya) — matn chekkasi
     if (strokeColor && strokeWidth > 0) {
@@ -249,14 +291,14 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
       ctx.lineJoin = "round";
       ctx.miterLimit = 2;
       lines.forEach((line, idx) => {
-        ctx.strokeText(line, centerX, startY + idx * lineHeight);
+        ctx.strokeText(line, anchorX, startY + idx * lineHeight);
       });
     }
 
     // Fill — asosiy matn rangi
     ctx.fillStyle = fontColor.startsWith("#") ? fontColor : `rgba(17, 24, 39, 0.92)`;
     lines.forEach((line, idx) => {
-      ctx.fillText(line, centerX, startY + idx * lineHeight);
+      ctx.fillText(line, anchorX, startY + idx * lineHeight);
     });
     ctx.restore();
   });
