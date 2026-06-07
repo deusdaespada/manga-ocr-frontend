@@ -372,6 +372,22 @@ export const api = {
       }
     ).then(handle<{ ok: boolean; split: boolean; parts?: number; remaining?: number }>);
   },
+  trimImage(
+    manga: string,
+    chapter: string,
+    filename: string,
+    side: "top" | "bottom",
+    pixels: number
+  ): Promise<{ ok: boolean; filename: string; new_width: number; new_height: number; original_height: number; artifacts_removed: number }> {
+    return fetch(
+      `/api/projects/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/trim-image`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename, side, pixels }),
+      }
+    ).then(handle<{ ok: boolean; filename: string; new_width: number; new_height: number; original_height: number; artifacts_removed: number }>);
+  },
   autoMerge(manga: string, chapter: string): Promise<{ ok: boolean; merge_groups: number; total_merged: number; remaining: number }> {
     return fetch(
       `/api/projects/${encodeURIComponent(manga)}/${encodeURIComponent(chapter)}/auto-merge`,

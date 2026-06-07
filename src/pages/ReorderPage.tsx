@@ -11,6 +11,7 @@ import {
   Wand2,
   Scissors,
   Layers,
+  Crop,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,7 @@ import type { PageInfo } from "../lib/types";
 import { Button } from "../components/ui/button";
 import SplitModal from "../components/SplitModal";
 import BulkIndexDeleteModal from "../components/project/BulkIndexDeleteModal";
+import BulkIndexTrimModal from "../components/project/BulkIndexTrimModal";
 
 type Mode = "reorder" | "merge";
 
@@ -286,6 +288,9 @@ export default function ReorderPage() {
   // Bulk (barcha boblardan index bo'yicha) o'chirish modali
   const [bulkDeleteIndex, setBulkDeleteIndex] = useState<number | null>(null);
 
+  // Bulk (barcha boblardan index bo'yicha) qirqish modali
+  const [bulkTrimIndex, setBulkTrimIndex] = useState<number | null>(null);
+
   // Mode
   const [mode, setMode] = useState<Mode>("merge");
 
@@ -312,10 +317,15 @@ export default function ReorderPage() {
     if (!silent) setLoading(true);
     try {
       const data = await api.getChapterPages(manga, chapter);
+      // Backend URL'lari `?t=<mtime>` cache-buster bilan keladi — fayl
+      // o'zgarsa (trim/split/merge) URL avtomatik yangilanadi. Silent
+      // reload'da qo'shimcha buster `&` bilan ulanadi (URL allaqachon `?`).
       const images = silent
         ? data.images.map((img) => ({
             ...img,
-            image_url: `${img.image_url}?t=${Date.now()}`,
+            image_url: img.image_url.includes("?")
+              ? `${img.image_url}&r=${Date.now()}`
+              : `${img.image_url}?r=${Date.now()}`,
           }))
         : data.images;
       setPages(images);
@@ -542,6 +552,14 @@ export default function ReorderPage() {
     setBulkDeleteIndex(idx);
   }
 
+  function handleBulkIndexTrim() {
+    const target = selected.length === 1 ? selected[0] : rangeStart;
+    if (!target) return;
+    const idx = pages.findIndex((p) => p.filename === target);
+    if (idx < 0) return;
+    setBulkTrimIndex(idx);
+  }
+
   async function handleSplitConfirm(cutLines: number[]) {
     if (!manga || !chapter || !splitModalFile) return;
     const res = await api.splitImage(manga, chapter, splitModalFile, cutLines);
@@ -724,6 +742,18 @@ export default function ReorderPage() {
                     </Button>
                   )}
 
+                  {splitTarget && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleBulkIndexTrim}
+                      title="Barcha boblardan shu indexdagi rasmni tepa/pastdan bir xil qirqish"
+                    >
+                      <Crop className="mr-1.5 h-3.5 w-3.5" />
+                      Barcha boblardan qirqish
+                    </Button>
+                  )}
+
                   <Button
                     variant="destructive"
                     size="sm"
@@ -821,6 +851,18 @@ export default function ReorderPage() {
           currentTotal={pages.length}
           onClose={() => setBulkDeleteIndex(null)}
           onDeleted={() => loadPages(true)}
+        />
+      )}
+
+      {/* Barcha boblardan index bo'yicha qirqish modali */}
+      {bulkTrimIndex !== null && (
+        <BulkIndexTrimModal
+          open={bulkTrimIndex !== null}
+          manga={manga}
+          targetIndex={bulkTrimIndex}
+          currentTotal={pages.length}
+          onClose={() => setBulkTrimIndex(null)}
+          onTrimmed={() => loadPages(true)}
         />
       )}
     </DndContext>
