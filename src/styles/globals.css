@@ -44,6 +44,19 @@
 @font-face { font-family: "Komika Text"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/KomikaText-Bold.ttf") format("truetype"); }
 @font-face { font-family: "Komika Text"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/KomikaText-BoldItalic.ttf") format("truetype"); }
 
+/* Manga Temple — dialog (alternativa) */
+@font-face { font-family: "Manga Temple"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/MangaTemple-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Manga Temple"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/MangaTemple-Italic.ttf") format("truetype"); }
+@font-face { font-family: "Manga Temple"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/MangaTemple-Bold.ttf") format("truetype"); }
+@font-face { /* alohida bold-italic yo'q — bold faylni ishlatamiz */ font-family: "Manga Temple"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/MangaTemple-Bold.ttf") format("truetype"); }
+
+/* Marker Notes — dialog/qo'lyozma (alohida bold yo'q) */
+@font-face { font-family: "Marker Notes"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/MarkerNotes-Regular.ttf") format("truetype"); }
+@font-face { font-family: "Marker Notes"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/MarkerNotes-Italic.ttf") format("truetype"); }
+
+/* DK Longreach — dialog (yagona uslub) */
+@font-face { font-family: "DK Longreach"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/DKLongreach-Regular.otf") format("opentype"); }
+
 /* Agency Gothic — narration / fikr */
 @font-face { font-family: "Agency Gothic"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/AgencyGothicCT-Bold.otf") format("opentype"); }
 @font-face { font-family: "Agency Gothic"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/AgencyGothicCT-Bold.otf") format("opentype"); }
@@ -60,6 +73,7 @@
 @font-face { font-family: "Outrun Future"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/OutrunFuture-Bold.otf") format("opentype"); }
 @font-face { font-family: "Outrun Future"; font-style: italic; font-weight: 700; font-display: swap; src: url("/fonts/OutrunFuture-BoldItalic.otf") format("opentype"); }
 @font-face { font-family: "Stupid Cupid"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/StupidCupid-Regular.otf") format("opentype"); }
+@font-face { font-family: "Forsaken"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/Forsaken-Regular.otf") format("opentype"); }
 
 /* Bangers — SFX (self-hosted; oldin Google CDN edi) */
 @font-face { font-family: "Bangers"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/Bangers-Regular.ttf") format("truetype"); }

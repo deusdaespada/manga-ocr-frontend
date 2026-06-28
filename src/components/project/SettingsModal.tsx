@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { X, Save, Loader2, Settings2 } from "lucide-react";
+import { X, Save, Loader2, Settings2, Upload } from "lucide-react";
 
 import { api } from "../../lib/api";
 import type { ProjectSettings, TranslatorModelInfo, TranslatorModelsMap } from "../../lib/types";
 import { MANGA_FONTS, ROLE_DEFAULTS } from "../../lib/fonts";
+import { useFonts } from "../../hooks/useFonts";
+import FontUploadModal from "./FontUploadModal";
 import OcrBackendSelect from "../OcrBackendSelect";
 import InpaintBackendSelect from "../InpaintBackendSelect";
 import { Button } from "../ui/button";
@@ -71,10 +73,12 @@ function FontRoleSelect({
   label,
   value,
   onChange,
+  fonts,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  fonts: { family: string; category: string }[];
 }) {
   return (
     <Field label={label}>
@@ -83,7 +87,7 @@ function FontRoleSelect({
           <SelectValue placeholder="Font" />
         </SelectTrigger>
         <SelectContent>
-          {MANGA_FONTS.map((f) => (
+          {fonts.map((f) => (
             <SelectItem key={f.family} value={f.family}>
               <span style={{ fontFamily: f.family }}>{f.family}</span>
               <span className="ml-2 text-[10px] text-muted-foreground">
@@ -173,6 +177,8 @@ export default function SettingsModal({
   onClose,
 }: SettingsModalProps) {
   const [modelsMap, setModelsMap] = useState<TranslatorModelsMap>({});
+  const [fontUploadOpen, setFontUploadOpen] = useState(false);
+  const { fonts } = useFonts();
 
   useEffect(() => {
     if (open) {
@@ -184,6 +190,8 @@ export default function SettingsModal({
 
   const currentModels: TranslatorModelInfo[] = modelsMap[settings.backend] || [];
   const defaultModel = currentModels.find((m) => m.default)?.value || "";
+  // Dinamik katalog (built-in + yuklangan). Yuklanmaguncha statik ro'yxat.
+  const roleFonts = fonts.length > 0 ? fonts : MANGA_FONTS;
   const set = <K extends keyof ProjectSettings>(key: K, val: ProjectSettings[K]) =>
     setSettings((prev) => ({ ...prev, [key]: val }));
 
@@ -318,22 +326,36 @@ export default function SettingsModal({
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <p className="text-xs font-medium">Fontlar (rol bo'yicha)</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium">Fontlar (rol bo'yicha)</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1 text-xs"
+                onClick={() => setFontUploadOpen(true)}
+              >
+                <Upload className="h-3 w-3" />
+                Font yuklash
+              </Button>
+            </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <FontRoleSelect
                 label="Dialog"
                 value={settings.font_dialogue || ROLE_DEFAULTS.dialogue}
                 onChange={(v) => set("font_dialogue", v)}
+                fonts={roleFonts}
               />
               <FontRoleSelect
                 label="SFX / FX"
                 value={settings.font_sfx || ROLE_DEFAULTS.sfx}
                 onChange={(v) => set("font_sfx", v)}
+                fonts={roleFonts}
               />
               <FontRoleSelect
                 label="Narration"
                 value={settings.font_narration || ROLE_DEFAULTS.narration}
                 onChange={(v) => set("font_narration", v)}
+                fonts={roleFonts}
               />
             </div>
           </div>
@@ -359,6 +381,8 @@ export default function SettingsModal({
           </Button>
         </div>
       </div>
+
+      <FontUploadModal open={fontUploadOpen} onClose={() => setFontUploadOpen(false)} />
     </div>
   );
 }

@@ -157,6 +157,7 @@ export default function ChapterList({
   const [autoMergingChapters, setAutoMergingChapters] = useState<Set<string>>(new Set());
   const [publishedExpanded, setPublishedExpanded] = useState(false);
   const [bulkValidating, setBulkValidating] = useState(false);
+  const [offloading, setOffloading] = useState(false);
 
   async function handleAutoMerge(chapter: Chapter) {
     setAutoMergingChapters((prev) => {
@@ -238,6 +239,41 @@ export default function ChapterList({
       toast.error((e as Error).message);
     } finally {
       setUnpublishing(false);
+    }
+  }
+
+  // Publish qilingan boblarning lokal fayllarini o'chirib R2-sync holatiga
+  // o'tkazadi (disk bo'shatish). Bob R2/CDN da qoladi va o'quvchiga ko'rinadi.
+  async function handleOffload(names: string[]) {
+    if (!names.length) return;
+    if (
+      !confirm(
+        `${names.length} bob R2 sync holatiga o'tkaziladi.\n\n` +
+          `Lokal fayllar (input/output rasmlari) diskdan o'chiriladi va joy ` +
+          `bo'shaydi. Boblar R2/CDN da saqlanadi, o'quvchiga ko'rinishda qoladi. ` +
+          `Tahrirlash uchun ularni qaytadan yuklash kerak bo'ladi.\n\nDavom etilsinmi?`,
+      )
+    ) {
+      return;
+    }
+    setOffloading(true);
+    try {
+      const res = await api.offloadPublishedChapters(projectName, names);
+      let msg = res.message;
+      if (res.freed_mb > 0) msg += ` (${res.freed_mb} MB bo'shadi)`;
+      toast.success(msg);
+      if (res.skipped.length > 0) {
+        toast.warning(
+          `${res.skipped.length} bob o'tkazib yuborildi (R2 da topilmadi)`,
+        );
+      }
+      setSelectedPublished(new Set());
+      const updated = await api.getProject(projectName);
+      onProjectUpdate(updated);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setOffloading(false);
     }
   }
 
@@ -473,26 +509,56 @@ export default function ChapterList({
 
             {publishedLocalChapters.length > 0 && (
               <div className="border-b bg-emerald-500/[0.03] px-5 py-3">
-                <button
-                  className="flex w-full items-center gap-2 text-xs font-medium text-emerald-300 hover:text-emerald-200 transition-colors"
-                  onClick={() => setPublishedExpanded((v) => !v)}
-                >
-                  {publishedExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
-                  <CloudUpload className="h-3.5 w-3.5" />
-                  Published
-                  <span className="text-muted-foreground font-normal">
-                    {publishedLocalChapters.length} bob
-                  </span>
-                  {selectedPublished.size > 0 && (
-                    <span className="ml-auto text-orange-400">
-                      {selectedPublished.size} tanlangan
+                <div className="flex items-center gap-2">
+                  <button
+                    className="flex flex-1 items-center gap-2 text-xs font-medium text-emerald-300 hover:text-emerald-200 transition-colors"
+                    onClick={() => setPublishedExpanded((v) => !v)}
+                  >
+                    {publishedExpanded ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                    <CloudUpload className="h-3.5 w-3.5" />
+                    Published
+                    <span className="text-muted-foreground font-normal">
+                      {publishedLocalChapters.length} bob
                     </span>
-                  )}
-                </button>
+                    {selectedPublished.size > 0 && (
+                      <span className="text-orange-400">
+                        {selectedPublished.size} tanlangan
+                      </span>
+                    )}
+                  </button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={offloading}
+                    onClick={() =>
+                      handleOffload(
+                        selectedPublished.size > 0
+                          ? Array.from(selectedPublished)
+                          : publishedLocalChapters.map((c) => c.name),
+                      )
+                    }
+                    title={
+                      selectedPublished.size > 0
+                        ? `Tanlangan ${selectedPublished.size} bobning lokal fayllarini o'chirib R2 sync holatiga o'tkazish`
+                        : "Barcha publish qilingan boblarning lokal fayllarini o'chirib R2 sync holatiga o'tkazish (disk bo'shatish)"
+                    }
+                    className="h-7 gap-1.5 text-xs text-sky-400 hover:text-sky-300 border-sky-400/40"
+                  >
+                    {offloading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Cloud className="h-3 w-3" />
+                    )}
+                    R2 sync
+                    {selectedPublished.size > 0
+                      ? ` (${selectedPublished.size})`
+                      : ` (${publishedLocalChapters.length})`}
+                  </Button>
+                </div>
                 {!publishedExpanded ? (
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {publishedLocalChapters.map((chapter) => {

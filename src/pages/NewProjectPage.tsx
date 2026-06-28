@@ -4,7 +4,7 @@ import { Plus, Loader2, Sparkles, Link2, Search } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "../lib/api";
-import type { AgeRating, AuthorEntry, Folder, InpaintBackendValue, MangaLibSeries, MangaStatus, OcrBackendValue, ScheduleDay, TranslatorModelInfo, TranslatorModelsMap } from "../lib/types";
+import type { AgeRating, AuthorEntry, Folder, InpaintBackendValue, AutoFillPreview, MangaLibSeries, MangaStatus, OcrBackendValue, ScheduleDay, TranslatorModelInfo, TranslatorModelsMap, WeebCentralSeries } from "../lib/types";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
@@ -28,11 +28,11 @@ export default function NewProjectPage() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"manual" | "autofill">("autofill");
 
-  // MangaLib auto fill state
+  // Auto fill state (MangaLib yoki WeebCentral — manba URL'dan aniqlanadi)
   const [mangalibUrl, setMangalibUrl] = useState("");
   const [resolving, setResolving] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [preview, setPreview] = useState<MangaLibSeries | null>(null);
+  const [preview, setPreview] = useState<AutoFillPreview | null>(null);
   const [autoFillError, setAutoFillError] = useState("");
 
   const [name, setName] = useState("");
@@ -66,18 +66,60 @@ export default function NewProjectPage() {
   const currentModels: TranslatorModelInfo[] = modelsMap[backend] || [];
   const defaultModel = currentModels.find((m) => m.default)?.value || "";
 
+  // Manba turini URL/slug'dan aniqlaydi. WeebCentral linklari yoki bare ULID
+  // → weebcentral; aks holda mangalib (slug ham, mangalib.me link ham).
+  function detectSource(value: string): "mangalib" | "weebcentral" {
+    const v = value.trim().toLowerCase();
+    if (v.includes("weebcentral")) return "weebcentral";
+    if (!v.includes("/") && /^[0-9a-hjkmnp-tv-z]{20,30}$/.test(v)) {
+      return "weebcentral";
+    }
+    return "mangalib";
+  }
+
+  function previewFromMangaLib(s: MangaLibSeries): AutoFillPreview {
+    return {
+      title: s.title || s.rus_name || s.eng_name || s.slug,
+      subtitle: s.eng_name || s.name || "",
+      cover_url: s.cover_url,
+      chapter_count: s.chapter_count,
+      status: s.status,
+      year: s.year,
+      age_rating: s.age_rating,
+      summary: s.summary,
+    };
+  }
+
+  function previewFromWeebCentral(s: WeebCentralSeries): AutoFillPreview {
+    return {
+      title: s.title || s.name || s.series_id,
+      subtitle: s.alt_titles?.[0] || "",
+      cover_url: s.cover_url,
+      chapter_count: s.chapter_count,
+      status: s.status,
+      year: s.year,
+      age_rating: s.age_rating,
+      summary: s.summary,
+    };
+  }
+
   async function handleResolve() {
     const value = mangalibUrl.trim();
     if (!value) {
-      setAutoFillError("MangaLib link yoki slug kiriting");
+      setAutoFillError("MangaLib yoki WeebCentral link kiriting");
       return;
     }
     setResolving(true);
     setAutoFillError("");
     setPreview(null);
     try {
-      const series = await api.resolveMangaLib(value);
-      setPreview(series);
+      if (detectSource(value) === "weebcentral") {
+        const series = await api.resolveWeebCentral(value);
+        setPreview(previewFromWeebCentral(series));
+      } else {
+        const series = await api.resolveMangaLib(value);
+        setPreview(previewFromMangaLib(series));
+      }
     } catch (e) {
       setAutoFillError((e as Error).message || "Tekshirib bo'lmadi");
     } finally {
@@ -88,23 +130,31 @@ export default function NewProjectPage() {
   async function handleCreateFromLink() {
     const value = mangalibUrl.trim();
     if (!value) {
-      setAutoFillError("MangaLib link yoki slug kiriting");
+      setAutoFillError("MangaLib yoki WeebCentral link kiriting");
       return;
     }
     setCreating(true);
     setAutoFillError("");
     setError("");
     try {
-      const result = await api.createMangaLibProject({
-        url_or_slug: value,
-        folder: folder.trim() || undefined,
-      });
+      let result: { title: string; chapter_count: number; slug: string };
+      if (detectSource(value) === "weebcentral") {
+        result = await api.createWeebCentralProject({
+          url_or_id: value,
+          folder: folder.trim() || undefined,
+        });
+      } else {
+        result = await api.createMangaLibProject({
+          url_or_slug: value,
+          folder: folder.trim() || undefined,
+        });
+      }
       toast.success(`"${result.title}" yaratildi — ${result.chapter_count} bob`);
       navigate(`/project/${result.slug}`);
     } catch (e) {
       const msg = (e as Error).message || "Yaratib bo'lmadi";
       if (/already|409|biriktirilgan|attached/i.test(msg)) {
-        setAutoFillError("Bu MangaLib slug allaqachon boshqa loyihaga biriktirilgan");
+        setAutoFillError("Bu seriya allaqachon boshqa loyihaga biriktirilgan");
       } else {
         setAutoFillError(msg);
       }
@@ -169,14 +219,14 @@ export default function NewProjectPage() {
           <TabsList className="w-full">
             <TabsTrigger value="autofill" className="flex-1 gap-2">
               <Sparkles className="h-4 w-4" />
-              Auto fill (MangaLib)
+              Auto fill (MangaLib / WeebCentral)
             </TabsTrigger>
             <TabsTrigger value="manual" className="flex-1">Qo'lda</TabsTrigger>
           </TabsList>
 
           <TabsContent value="autofill" className="space-y-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium">MangaLib link yoki slug</label>
+              <label className="text-sm font-medium">MangaLib yoki WeebCentral link</label>
               <div className="flex gap-2">
                 <Input
                   value={mangalibUrl}
@@ -184,7 +234,7 @@ export default function NewProjectPage() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleResolve();
                   }}
-                  placeholder="https://mangalib.me/ru/manga/114307--..."
+                  placeholder="mangalib.me/ru/manga/... yoki weebcentral.com/series/..."
                   disabled={creating}
                 />
                 <Button
@@ -230,11 +280,11 @@ export default function NewProjectPage() {
                 </div>
                 <div className="min-w-0 space-y-1.5">
                   <h3 className="text-sm font-semibold leading-tight">
-                    {preview.title || preview.rus_name || preview.eng_name || preview.slug}
+                    {preview.title}
                   </h3>
-                  {preview.eng_name && (
+                  {preview.subtitle && (
                     <p className="text-xs text-muted-foreground line-clamp-1">
-                      {preview.eng_name}
+                      {preview.subtitle}
                     </p>
                   )}
                   <div className="flex flex-wrap gap-1.5">

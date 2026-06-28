@@ -1,4 +1,5 @@
 import type { Region } from "./types";
+import { normalizeForFont } from "./textNormalize";
 
 // ── O'zbekcha bo'g'in-asosli so'z ko'chirish (hyphenation) ──────────────────
 // Backend `uz_hyphen.py` bilan AYNAN bir xil mantiq. Uzun so'z qatorga
@@ -178,7 +179,7 @@ function buildFontString(
  * 3. Matn berilgan bo'lsa, `preferredMinFont` (18px) da sig'maguncha
  *    bubble yo'nalishida progressiv kengaytiriladi.
  */
-const PREFERRED_MIN_FONT = 18;
+const PREFERRED_MIN_FONT = 24;
 const FILL_RATIO = 0.92;
 
 // Apple Vision (built-in) detektori `bubble_bbox`ni OCR bbox'ga TENG qilib
@@ -209,7 +210,7 @@ const BUBBLE_TEXT_ZONE = 0.82;
 // balandligidan oshib keta olmaydi. Avval bu 72px qatʼiy edi — natijada KATTA
 // bubble'larda matn 72px da to'xtab, pufak ichida juda kichik ko'rinardi.
 // Endi haqiqiy chegara box o'lchamidan kelib chiqib hisoblanadi (`maxFontForBox`).
-const AUTO_MIN_FONT = 14;
+const AUTO_MIN_FONT = 16;
 const AUTO_MAX_FONT = 72;
 // Yuqori xavfsizlik tomi (SFX kabi ulkan bo'lib ketmasligi uchun).
 const AUTO_FONT_HARD_CAP = 240;
@@ -575,7 +576,10 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
 
   regions.forEach((r) => {
     if (!r.uz_text) return;
-    const text = r.uz_text.toUpperCase().trim();
+    // Backend `render_page` bilan bir xil: UPPERCASE + normalize_for_font
+    // (fontda yo'q belgilar ASCII'ga). Shu tartib o'lcham va wrap'ni publish
+    // bilan mos qiladi.
+    const text = normalizeForFont(r.uz_text.toUpperCase()).trim();
     if (!text) return;
 
     const fontWeight = r.font_weight || "bold";
@@ -626,7 +630,7 @@ export function drawTranslatedTexts(ctx: CanvasRenderingContext2D, regions: Regi
     const maxWidth = Math.max(10, boxWidth - padding * 2);
     const maxHeight = Math.max(10, boxHeight - padding * 2);
 
-    const MIN_FONT = 8;
+    const MIN_FONT = 10;
 
     // Font hajmi:
     //  - Foydalanuvchi QO'LDA o'rnatgan bo'lsa (font_size_manual) — o'shani

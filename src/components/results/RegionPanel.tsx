@@ -1,10 +1,14 @@
-import { memo, useState, useCallback } from "react";
+import { memo, useState, useCallback, useMemo } from "react";
 import { X, Save, Minus, Plus, RotateCcw, RotateCw, Languages, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { api } from "../../lib/api";
-import type { Region, ResultsData } from "../../lib/types";
+import type { Region, ResultsData, FontInfo } from "../../lib/types";
 import { getFontsByCategory, getFontEntry } from "../../lib/fonts";
+import { useFonts } from "../../hooks/useFonts";
+
+type FontGroup = { family: string }[];
+type FontLike = { hasItalic: boolean };
 
 export type RegionDraft = {
   original: string;
@@ -49,9 +53,9 @@ interface RegionItemProps {
   onDataUpdate: React.Dispatch<React.SetStateAction<ResultsData | null>>;
   onReocrRegion: (idx: number) => void;
   onRetranslateRegion: (idx: number) => void;
+  fontsByCategory: Record<string, FontGroup>;
+  fontEntryMap: Map<string, FontLike>;
 }
-
-const fontsByCategory = getFontsByCategory();
 
 const RegionItem = memo(function RegionItem({
   region: r,
@@ -69,6 +73,8 @@ const RegionItem = memo(function RegionItem({
   onDataUpdate,
   onReocrRegion,
   onRetranslateRegion,
+  fontsByCategory,
+  fontEntryMap,
 }: RegionItemProps) {
   const key = `${currentPage}-${i}`;
   // Saqlangan font_size faqat QO'LDA o'rnatilgan bo'lsa (font_size_manual)
@@ -91,7 +97,7 @@ const RegionItem = memo(function RegionItem({
   const draftStrokeColor = draft.fontStrokeColor ?? serverStrokeColor;
   const serverStrokeWidth = r.font_stroke_width || 0;
   const draftStrokeWidth = draft.fontStrokeWidth ?? serverStrokeWidth;
-  const fontInfo = getFontEntry(draftFontFamily);
+  const fontInfo = fontEntryMap.get(draftFontFamily) ?? getFontEntry(draftFontFamily);
   const isDirty =
     draft.original !== (r.original_text || "") ||
     draft.translation !== (r.uz_text || "") ||
@@ -527,6 +533,29 @@ export default function RegionPanel({
   const [retranslatingRegion, setRetranslatingRegion] = useState<number | null>(null);
   const [reocrPage, setReocrPage] = useState(false);
   const [reocrRegionIdx, setReocrRegionIdx] = useState<number | null>(null);
+  const { fonts } = useFonts();
+
+  // Dinamik katalog (built-in + yuklangan). Yuklanmaguncha statik ro'yxat.
+  const fontsByCategory = useMemo<Record<string, FontGroup>>(() => {
+    if (fonts.length === 0) return getFontsByCategory();
+    const labels: Record<string, string> = {
+      comic: "Dialog",
+      sfx: "SFX / FX",
+      narration: "Narration",
+      clean: "Oddiy",
+    };
+    const grouped: Record<string, FontInfo[]> = {};
+    for (const f of fonts) {
+      const label = labels[f.category] || f.category;
+      (grouped[label] ||= []).push(f);
+    }
+    return grouped;
+  }, [fonts]);
+
+  const fontEntryMap = useMemo<Map<string, FontLike>>(
+    () => new Map(fonts.map((f) => [f.family, f])),
+    [fonts],
+  );
 
   const handleReocrPage = useCallback(async () => {
     setReocrPage(true);
@@ -671,6 +700,8 @@ export default function RegionPanel({
                 onDataUpdate={onDataUpdate}
                 onReocrRegion={handleReocrRegion}
                 onRetranslateRegion={handleRetranslateRegion}
+                fontsByCategory={fontsByCategory}
+                fontEntryMap={fontEntryMap}
               />
             );
           })

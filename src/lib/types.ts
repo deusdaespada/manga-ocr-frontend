@@ -617,6 +617,56 @@ export type MangaLibSeries = {
   last_chapter: number | null;
 };
 
+// ── WeebCentral ─────────────────────────────────────────────────────────
+
+export type WeebCentralSeries = {
+  series_id: string;
+  title: string;
+  name: string;
+  summary: string;
+  cover_url: string;
+  tags: string[];
+  authors: string[];
+  alt_titles: string[];
+  type_label: string;
+  status: string;
+  age_rating: string;
+  adult: boolean;
+  year: number | null;
+  anilist_id: number | null;
+  rating: number | null;
+  chapter_count: number;
+  first_chapter: number | null;
+  last_chapter: number | null;
+};
+
+export type WeebCentralCreateRequest = {
+  url_or_id: string;
+  folder?: string;
+};
+
+export type WeebCentralCreateResponse = {
+  ok: boolean;
+  slug: string;
+  title: string;
+  weebcentral_id: string;
+  cover_url: string;
+  rating: number | null;
+  chapter_count: number;
+};
+
+/** Auto fill manbasidan qat'i nazar preview uchun normallashtirilgan shakl. */
+export type AutoFillPreview = {
+  title: string;
+  subtitle: string;
+  cover_url: string;
+  chapter_count: number;
+  status: string;
+  year: number | null;
+  age_rating: string;
+  summary: string;
+};
+
 export type MangaLibChapterEntry = {
   number: number;
   volume: number;
@@ -678,4 +728,73 @@ export type MangaLibTokenStatus =
 export type MangaLibTokenSaveRequest = {
   token: string;
   user_label?: string;
+};
+
+// ── Fontlar (upload / preview / katalog) ───────────────────────────────────
+
+export type FontStyleKey = "normal" | "bold" | "italic" | "bold-italic";
+
+export type FontCategory = "comic" | "sfx" | "narration" | "clean";
+
+// `GET /api/fonts` -> fonts[] elementi (backend `list_fonts()` bilan mos).
+export type FontInfo = {
+  family: string;
+  category: FontCategory;
+  hasBold: boolean;
+  hasItalic: boolean;
+  source: "builtin" | "user";
+  hasCyrillic: boolean;
+  hasLatin: boolean;
+  glyphs: number;
+  files: Partial<Record<FontStyleKey, string>>;
+};
+
+export type FontListResponse = {
+  fonts: FontInfo[];
+  role_defaults: Record<string, string>;
+  category_labels: Record<string, string>;
+};
+
+// `POST /api/fonts/preview` -> items[] elementi.
+export type FontPreviewItem = {
+  filename: string;
+  valid: boolean;
+  error?: string;
+  family?: string;
+  styleKey?: FontStyleKey;
+  weight?: "normal" | "bold";
+  style?: "normal" | "italic";
+  glyphs?: number;
+  latin?: number;
+  cyrillic?: number;
+  hasLatin?: boolean;
+  hasCyrillic?: boolean;
+  category?: FontCategory;
+  conflict?: boolean;
+  conflictSource?: "builtin" | "user" | null;
+  preview?: string | null;
+  warning?: string;
+};
+
+export type FontPreviewResponse = {
+  items: FontPreviewItem[];
+};
+
+// `POST /api/fonts/upload` meta elementi (files bilan parallel).
+export type FontUploadMeta = {
+  family: string;
+  category: FontCategory;
+  style: FontStyleKey;
+};
+
+export type FontUploadResponse = {
+  saved: { filename: string; family: string; style: FontStyleKey; category: FontCategory }[];
+  families: string[];
+  fonts: FontInfo[];
+};
+
+export type FontDeleteResponse = {
+  deleted: string;
+  removed_files: string[];
+  fonts: FontInfo[];
 };

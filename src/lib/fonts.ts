@@ -19,6 +19,9 @@ export const MANGA_FONTS: FontEntry[] = [
   // Dialog (bubble)
   { family: "Anime Ace", category: "comic", hasBold: true, hasItalic: true },
   { family: "Komika Text", category: "comic", hasBold: true, hasItalic: true },
+  { family: "Manga Temple", category: "comic", hasBold: true, hasItalic: true },
+  { family: "Marker Notes", category: "comic", hasBold: false, hasItalic: true },
+  { family: "DK Longreach", category: "comic", hasBold: false, hasItalic: false },
 
   // Narration / fikr
   { family: "Agency Gothic", category: "narration", hasBold: false, hasItalic: false },
@@ -30,6 +33,7 @@ export const MANGA_FONTS: FontEntry[] = [
   { family: "Magma Break", category: "sfx", hasBold: false, hasItalic: true },
   { family: "Outrun Future", category: "sfx", hasBold: true, hasItalic: true },
   { family: "Stupid Cupid", category: "sfx", hasBold: false, hasItalic: false },
+  { family: "Forsaken", category: "sfx", hasBold: false, hasItalic: false },
 
   // Oddiy / universal
   { family: "Nunito", category: "clean", hasBold: true, hasItalic: true },

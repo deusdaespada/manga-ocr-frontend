@@ -23,6 +23,7 @@ import { usePenMode } from "../hooks/usePenMode";
 import { useEyeDropperMode } from "../hooks/useEyeDropperMode";
 import { useResizeMode } from "../hooks/useResizeMode";
 import { useScrollSync } from "../hooks/useScrollSync";
+import { useFonts } from "../hooks/useFonts";
 
 function collectTexts(pages: Page[]) {
   const texts: { pageIdx: number; regionIdx: number; original_text: string; uz_text: string }[] = [];
@@ -55,6 +56,8 @@ const DEFAULT_SETTINGS: ProjectSettings = {
 
 export default function ResultsPage() {
   const { manga, chapter } = useParams();
+  // User fontlarni (yuklangan) browserga yuklab qo'yamiz — canvas render uchun.
+  useFonts();
   const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<ResultsData | null>(null);
   const [currentPage, setCurrentPageRaw] = useState(() => {
@@ -223,6 +226,21 @@ export default function ResultsPage() {
       else cleanImg.onload = handler;
     }
   }, [data, currentPage, pages, regionsWithDraftFontSize, renderBboxes, renderTextOverlay]);
+
+  // Yuklangan (user) fontlar asинхрон keladi — font tayyor bo'lgach matn
+  // overlay'ni qayta chizamiz, aks holda canvas eski/fallback fontda qoladi.
+  useEffect(() => {
+    if (!("fonts" in document)) return;
+    const onDone = () => {
+      const cleanImg = cleanImgRef.current;
+      const cleanCanvas = cleanCanvasRef.current;
+      if (cleanImg && cleanCanvas && cleanImg.complete && cleanImg.naturalWidth > 0) {
+        renderTextOverlay(cleanImg, cleanCanvas, regionsWithDraftFontSize);
+      }
+    };
+    document.fonts.addEventListener("loadingdone", onDone);
+    return () => document.fonts.removeEventListener("loadingdone", onDone);
+  }, [regionsWithDraftFontSize, renderTextOverlay]);
 
   // Reading mode: faqat ko'rinadigan sahifalarda matn overlay render qilish (lazy)
   useEffect(() => {

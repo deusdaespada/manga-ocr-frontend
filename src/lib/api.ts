@@ -7,6 +7,11 @@ import type {
   AutoPilotState,
   CropPreviewResponse,
   Folder,
+  FontDeleteResponse,
+  FontListResponse,
+  FontPreviewResponse,
+  FontUploadMeta,
+  FontUploadResponse,
   GenreOption,
   JobInfo,
   JobStartResponse,
@@ -30,6 +35,9 @@ import type {
   MangaLibSeries,
   MangaLibTokenStatus,
   MangaLibTokenSaveRequest,
+  WeebCentralSeries,
+  WeebCentralCreateRequest,
+  WeebCentralCreateResponse,
   OcrBackendInfo,
   InpaintBackendInfo,
   PageInfo,
@@ -128,6 +136,36 @@ export const api = {
   },
   getTranslatorModels(): Promise<TranslatorModelsMap> {
     return fetch("/api/translator-models").then(handle<TranslatorModelsMap>);
+  },
+
+  // ── Fontlar ─────────────────────────────────────────────────────────
+
+  // Built-in + user fontlar katalogi (rol default'lari bilan).
+  getFonts(): Promise<FontListResponse> {
+    return fetch("/api/fonts").then(handle<FontListResponse>);
+  },
+  // Fayllarni SAQLAMASDAN tahlil qiladi: metadata + qoplama + namuna rasm.
+  previewFonts(files: File[]): Promise<FontPreviewResponse> {
+    const form = new FormData();
+    for (const f of files) form.append("files", f);
+    return fetch("/api/fonts/preview", { method: "POST", body: form }).then(
+      handle<FontPreviewResponse>,
+    );
+  },
+  // Tasdiqlangan fayllarni saqlaydi. `meta` files bilan PARALLEL bo'lishi shart.
+  uploadFonts(files: File[], meta: FontUploadMeta[]): Promise<FontUploadResponse> {
+    const form = new FormData();
+    for (const f of files) form.append("files", f);
+    form.append("meta", JSON.stringify(meta));
+    return fetch("/api/fonts/upload", { method: "POST", body: form }).then(
+      handle<FontUploadResponse>,
+    );
+  },
+  // Faqat user yuklagan fontni o'chiradi (built-in himoyalangan).
+  deleteFont(family: string): Promise<FontDeleteResponse> {
+    return fetch(`/api/fonts/${encodeURIComponent(family)}`, {
+      method: "DELETE",
+    }).then(handle<FontDeleteResponse>);
   },
   uploadFiles(slug: string, files: File[]): Promise<UploadResponse> {
     const form = new FormData();
@@ -451,6 +489,18 @@ export const api = {
       body: JSON.stringify({ chapters }),
     }).then(handle<{ message: string; chapters: string[]; deleted_files: number }>);
   },
+  offloadPublishedChapters(
+    manga: string,
+    chapters?: string[],
+  ): Promise<{ message: string; offloaded: string[]; skipped: { chapter: string; reason: string }[]; freed_mb: number }> {
+    return fetch(`/api/offload/${encodeURIComponent(manga)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chapters: chapters ?? null }),
+    }).then(
+      handle<{ message: string; offloaded: string[]; skipped: { chapter: string; reason: string }[]; freed_mb: number }>,
+    );
+  },
   syncR2(payload: R2SyncRequest): Promise<R2SyncResponse> {
     return fetch("/api/r2/sync", {
       method: "POST",
@@ -627,6 +677,25 @@ export const api = {
     return fetch("/api/mangalib/token", {
       method: "DELETE",
     }).then(handle<{ ok: boolean }>);
+  },
+
+  // ── WeebCentral ─────────────────────────────────────────────────────
+
+  resolveWeebCentral(urlOrId: string): Promise<WeebCentralSeries> {
+    return fetch("/api/weebcentral/resolve", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url_or_id: urlOrId }),
+    }).then(handle<WeebCentralSeries>);
+  },
+  createWeebCentralProject(
+    payload: WeebCentralCreateRequest,
+  ): Promise<WeebCentralCreateResponse> {
+    return fetch("/api/weebcentral/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then(handle<WeebCentralCreateResponse>);
   },
 
   startAutoPilot(manga: string, config: AutoPilotConfig): Promise<AutoPilotStartResponse> {
