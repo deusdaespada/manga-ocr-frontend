@@ -14,11 +14,11 @@ import TabBar from "./TabBar";
 import TabView from "./TabView";
 
 const navItems = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/new", label: "Yangi manga", icon: Plus },
-  { to: "/upload", label: "Yuklash", icon: Upload },
-  { to: "/mangadex", label: "Search Manga", icon: Search },
-  { to: "/jobs", label: "Joblar", icon: Activity },
+  { to: "/", label: "Painel", icon: LayoutDashboard },
+  { to: "/new", label: "Novo mangá", icon: Plus },
+  { to: "/upload", label: "Enviar", icon: Upload },
+  { to: "/mangadex", label: "Buscar Mangá", icon: Search },
+  { to: "/jobs", label: "Tarefas", icon: Activity },
 ];
 
 export default function AppLayout() {
@@ -94,7 +94,7 @@ export default function AppLayout() {
             ) : (
               <>
                 <PanelLeftClose className="h-4 w-4 shrink-0" />
-                <span className="truncate">Yig'ish</span>
+                <span className="truncate">Recolher</span>
               </>
             )}
           </button>
