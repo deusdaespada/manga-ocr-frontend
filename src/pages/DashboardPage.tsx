@@ -19,7 +19,6 @@ export default function DashboardPage() {
   const [tokenConnected, setTokenConnected] = useState(false);
 
   useEffect(() => {
-    // Global 18+ token holati — header indikatori uchun.
     api
       .getMangaLibToken()
       .then((res) => setTokenConnected(res.connected === true))
@@ -29,7 +28,6 @@ export default function DashboardPage() {
   useEffect(() => {
     let active = true;
 
-    // Manga ro'yxati birinchi va mustaqil yuklanadi — statistika kutilmaydi.
     api
       .getProjects()
       .then((projectsData) => {
@@ -38,10 +36,9 @@ export default function DashboardPage() {
       })
       .catch((err) => {
         if (!active) return;
-        setError(err.message || "Xatolik");
+        setError(err.message || "Erro ao carregar projetos");
       });
 
-    // Statistika orqa fonda yuklanadi va mangalar ko'rsatilishiga to'sqinlik qilmaydi.
     api
       .getStats()
       .then((statsData) => {
@@ -49,7 +46,7 @@ export default function DashboardPage() {
         setStats(statsData);
       })
       .catch(() => {
-        /* statistika xatosi mangalar ro'yxatiga ta'sir qilmaydi */
+        /* erro de estatísticas não bloqueia a lista de mangás */
       });
 
     return () => {
@@ -69,10 +66,10 @@ export default function DashboardPage() {
       const warnings = preview.warnings.slice(0, 3).join("\n");
       const ok = confirm(
         [
-          `R2 preview: ${preview.scanned_projects} manga, ${preview.created_projects} yangi project, ${preview.created_chapters} yangi chapter.`,
-          `${preview.updated_chapters} chapter yangilanadi, ${skipped} local chapter saqlab qolinadi.`,
-          warnings ? `\nOgohlantirishlar:\n${warnings}` : "",
-          "\nReal sync boshlansinmi?",
+          `Prévia R2: ${preview.scanned_projects} mangás, ${preview.created_projects} novo(s) projeto(s), ${preview.created_chapters} novo(s) capítulo(s).`,
+          `${preview.updated_chapters} capítulo(s) serão atualizados, ${skipped} capítulo(s) locais serão mantidos.`,
+          warnings ? `\nAvisos:\n${warnings}` : "",
+          "\nDeseja iniciar a sincronização real?",
         ].join("\n")
       );
       if (!ok) return;
@@ -89,10 +86,10 @@ export default function DashboardPage() {
       setStats(statsData);
       setProjects(projectsData);
       toast.success(
-        `R2 sync: ${result.created_projects} project, ${result.created_chapters} chapter qo'shildi`
+        `Sync R2: ${result.created_projects} projeto(s), ${result.created_chapters} capítulo(s) adicionados`
       );
       if (result.warnings.length > 0) {
-        toast.info(`${result.warnings.length} ta ogohlantirish bor`);
+        toast.info(`${result.warnings.length} aviso(s) encontrado(s)`);
       }
     } catch (err) {
       toast.error((err as Error).message);
@@ -103,11 +100,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
+      {/* Cabeçalho */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-description">Pipeline holati va loyihalar statistikasi.</p>
+          <h1 className="page-title">Painel</h1>
+          <p className="page-description">Status do pipeline e estatísticas dos projetos.</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -117,12 +114,12 @@ export default function DashboardPage() {
             onClick={() => setTokenOpen(true)}
             title={
               tokenConnected
-                ? "MangaLib token ulangan (18+)"
-                : "MangaLib token ulanmagan"
+                ? "Token MangaLib conectado (18+)"
+                : "Token MangaLib não conectado"
             }
           >
             <KeyRound className="h-3.5 w-3.5" />
-            MangaLib token
+            Token MangaLib
             <span
               className={`h-1.5 w-1.5 rounded-full ${
                 tokenConnected ? "bg-emerald-500" : "bg-muted-foreground/40"
@@ -146,7 +143,7 @@ export default function DashboardPage() {
           <Link to="/new">
             <Button size="sm" className="gap-1.5">
               <Plus className="h-3.5 w-3.5" />
-              Yangi manga
+              Novo mangá
             </Button>
           </Link>
         </div>
