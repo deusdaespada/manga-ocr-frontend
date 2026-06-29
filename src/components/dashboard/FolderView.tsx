@@ -17,8 +17,6 @@ import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 
-// --- helpers ---
-
 type ProjectStage = "uploaded" | "ocr" | "translate" | "publish" | "done";
 
 function getProjectStage(project: Project): ProjectStage {
@@ -30,13 +28,11 @@ function getProjectStage(project: Project): ProjectStage {
     return project.published_at ? "done" : "publish";
   }
 
-  // All chapters past OCR (ocr_done / translating / done)
   const allPastOcr = statuses.every(
     (s) => s === "ocr_done" || s === "translating" || s === "done"
   );
   if (allPastOcr) return "translate";
 
-  // At least one chapter started or completed OCR
   const hasOcrActivity = statuses.some(
     (s) =>
       s === "processing" ||
@@ -54,12 +50,12 @@ const stageTabs: {
   label: string;
   icon: typeof BookOpen;
 }[] = [
-  { id: "all", label: "Barchasi", icon: BookOpen },
-  { id: "uploaded", label: "Yuklangan", icon: Upload },
-  { id: "ocr", label: "OCR & Tozalash", icon: ScanText },
-  { id: "translate", label: "Tarjima", icon: Languages },
-  { id: "publish", label: "Nashr", icon: Send },
-  { id: "done", label: "Tayyor", icon: CheckCircle2 },
+  { id: "all", label: "Todos", icon: BookOpen },
+  { id: "uploaded", label: "Enviados", icon: Upload },
+  { id: "ocr", label: "OCR & Limpeza", icon: ScanText },
+  { id: "translate", label: "Tradução", icon: Languages },
+  { id: "publish", label: "Publicação", icon: Send },
+  { id: "done", label: "Concluídos", icon: CheckCircle2 },
 ];
 
 function statusForProject(project: Project) {
@@ -87,11 +83,17 @@ const statusVariant: Record<
   failed: "danger",
 };
 
+const statusLabel: Record<string, string> = {
+  done: "Concluído",
+  processing: "Processando",
+  translating: "Traduzindo",
+  uploaded: "Enviado",
+  failed: "Erro",
+};
+
 function genreLabel(val: string) {
   return val.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
-
-// --- Manga Card ---
 
 function MangaCard({ project }: { project: Project }) {
   const navigate = useNavigate();
@@ -106,7 +108,7 @@ function MangaCard({ project }: { project: Project }) {
       className="group cursor-pointer overflow-hidden rounded-lg border bg-card transition-all hover:border-primary/30 hover:shadow-md"
       onClick={() => navigate(`/project/${project.slug}`)}
     >
-      {/* Cover */}
+      {/* Capa */}
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-muted">
         {project.metadata?.cover_url ? (
           <img
@@ -121,26 +123,26 @@ function MangaCard({ project }: { project: Project }) {
           </div>
         )}
 
-        {/* Status badge */}
+        {/* Badge de status */}
         <div className="absolute right-2 top-2">
           <Badge variant={statusVariant[mainStatus] || "info"}>
-            {mainStatus}
+            {statusLabel[mainStatus] ?? mainStatus}
           </Badge>
         </div>
 
-        {/* Hover arrow */}
+        {/* Seta hover */}
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
           <ArrowRight className="h-6 w-6 text-white opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
       </div>
 
-      {/* Info */}
+      {/* Informações */}
       <div className="px-3 py-2 space-y-1.5">
         <h3 className="text-sm font-medium truncate">
           {project.display_name}
         </h3>
 
-        {/* Progress */}
+        {/* Progresso */}
         <div className="flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
             <div
@@ -176,8 +178,6 @@ function MangaCard({ project }: { project: Project }) {
   );
 }
 
-// --- Main FolderView ---
-
 interface FolderViewProps {
   projects: Project[];
   error: string | null;
@@ -186,7 +186,6 @@ interface FolderViewProps {
 export default function FolderView({ projects, error }: FolderViewProps) {
   const [query, setQuery] = useState("");
 
-  // Qidiruv bo'yicha filtrlangan mangalar — nomi va teglari bo'yicha.
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return projects;
@@ -198,7 +197,6 @@ export default function FolderView({ projects, error }: FolderViewProps) {
     });
   }, [projects, query]);
 
-  // Group projects by pipeline stage
   const grouped = useMemo(() => {
     const map: Record<string, Project[]> = {
       all: filtered,
@@ -218,7 +216,7 @@ export default function FolderView({ projects, error }: FolderViewProps) {
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-400">
-        Xatolik: {error}
+        Erro: {error}
       </div>
     );
   }
@@ -227,9 +225,9 @@ export default function FolderView({ projects, error }: FolderViewProps) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card py-14 text-center">
         <BookOpen className="mb-2 h-8 w-8 text-muted-foreground/30" />
-        <p className="text-sm text-muted-foreground">Hali manga yo'q</p>
+        <p className="text-sm text-muted-foreground">Nenhum mangá ainda</p>
         <p className="mt-1 text-xs text-muted-foreground/60">
-          "Yangi manga" tugmasini bosib boshlang
+          Clique em "Novo mangá" para começar
         </p>
       </div>
     );
@@ -238,13 +236,13 @@ export default function FolderView({ projects, error }: FolderViewProps) {
   return (
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold shrink-0">Mangalar</h2>
+        <h2 className="text-sm font-semibold shrink-0">Mangás</h2>
         <div className="relative w-full max-w-xs">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Manga qidirish..."
+            placeholder="Buscar mangá..."
             className="h-8 pl-8 pr-8 text-sm"
           />
           {query && (
@@ -252,7 +250,7 @@ export default function FolderView({ projects, error }: FolderViewProps) {
               type="button"
               onClick={() => setQuery("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Tozalash"
+              aria-label="Limpar"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -260,8 +258,8 @@ export default function FolderView({ projects, error }: FolderViewProps) {
         </div>
         <span className="shrink-0 text-xs text-muted-foreground">
           {query
-            ? `${filtered.length} / ${projects.length} ta`
-            : `${projects.length} ta loyiha`}
+            ? `${filtered.length} / ${projects.length}`
+            : `${projects.length} projeto${projects.length !== 1 ? "s" : ""}`}
         </span>
       </div>
 
@@ -296,14 +294,14 @@ export default function FolderView({ projects, error }: FolderViewProps) {
                   <>
                     <Search className="mb-2 h-6 w-6 text-muted-foreground/20" />
                     <p className="text-xs text-muted-foreground/50">
-                      "{query}" bo'yicha manga topilmadi
+                      Nenhum mangá encontrado para "{query}"
                     </p>
                   </>
                 ) : (
                   <>
                     <tab.icon className="mb-2 h-6 w-6 text-muted-foreground/20" />
                     <p className="text-xs text-muted-foreground/50">
-                      Bu bosqichda manga yo'q
+                      Nenhum mangá nesta etapa
                     </p>
                   </>
                 )}
