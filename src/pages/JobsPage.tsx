@@ -15,6 +15,13 @@ const statusVariant: Record<string, "success" | "info" | "warning" | "danger"> =
   cancelled: "info",
 };
 
+const statusLabel: Record<string, string> = {
+  done: "Concluído",
+  running: "Executando",
+  failed: "Erro",
+  cancelled: "Cancelado",
+};
+
 export default function JobsPage() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobInfo[]>([]);
@@ -24,26 +31,26 @@ export default function JobsPage() {
     api
       .getJobs()
       .then((data) => setJobs(data.reverse()))
-      .catch((err) => setError(err.message || "Xatolik"));
+      .catch((err) => setError(err.message || "Erro ao carregar tarefas"));
   }, []);
 
   return (
     <div className="animate-fade-in">
       <div className="page-header">
-        <h1 className="page-title">Job tarixi</h1>
-        <p className="page-description">Pipeline ishga tushgan barcha jarayonlar.</p>
+        <h1 className="page-title">Histórico de tarefas</h1>
+        <p className="page-description">Todos os processos executados pelo pipeline.</p>
       </div>
 
       {error ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
-          Xatolik: {error}
+          Erro: {error}
         </div>
       ) : jobs.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card py-16 text-center">
           <Activity className="mb-3 h-10 w-10 text-muted-foreground/40" />
-          <p className="text-sm font-medium text-muted-foreground">Hali job yo'q</p>
+          <p className="text-sm font-medium text-muted-foreground">Nenhuma tarefa ainda</p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Pipeline ishga tushirganingizda bu yerda ko'rinadi.
+            As tarefas aparecerão aqui quando o pipeline for iniciado.
           </p>
         </div>
       ) : (
@@ -52,11 +59,11 @@ export default function JobsPage() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[120px]">ID</TableHead>
-                <TableHead>Manga / Chapter</TableHead>
-                <TableHead>Sozlamalar</TableHead>
+                <TableHead>Mangá / Capítulo</TableHead>
+                <TableHead>Configurações</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Xarajat</TableHead>
-                <TableHead className="w-[140px]">Vaqt</TableHead>
+                <TableHead>Custo</TableHead>
+                <TableHead className="w-[140px]">Data</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -69,13 +76,15 @@ export default function JobsPage() {
                   <TableCell className="mono text-xs text-muted-foreground">{job.id}</TableCell>
                   <TableCell className="font-medium">
                     {job.manga}
-                    <span className="text-muted-foreground"> / {job.chapter ? `${job.chapter}-bob` : "—"}</span>
+                    <span className="text-muted-foreground"> / {job.chapter ? `Cap. ${job.chapter}` : "—"}</span>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {job.language?.toUpperCase()} · {job.backend}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant[job.status] || "info"}>{job.status}</Badge>
+                    <Badge variant={statusVariant[job.status] || "info"}>
+                      {statusLabel[job.status] ?? job.status}
+                    </Badge>
                   </TableCell>
                   <TableCell className="mono text-xs">
                     {job.cost_usd ? `$${parseFloat(job.cost_usd).toFixed(4)}` : "—"}
