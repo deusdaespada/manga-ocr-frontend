@@ -15,12 +15,12 @@ interface StatsCardsProps {
 export default function StatsCards({ stats }: StatsCardsProps) {
   const statCards = stats
     ? [
-        { label: "Jami manga", value: stats.total_projects, icon: BookOpen, color: "text-indigo-400 bg-indigo-500/10" },
-        { label: "Jami chapter", value: stats.total_chapters, icon: Layers, color: "text-blue-400 bg-blue-500/10" },
-        { label: "Tayyor", value: stats.done_chapters, icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/10" },
-        { label: "Jarayonda", value: stats.processing_chapters, icon: Loader2, color: "text-amber-400 bg-amber-500/10" },
+        { label: "Total de mangás", value: stats.total_projects, icon: BookOpen, color: "text-indigo-400 bg-indigo-500/10" },
+        { label: "Total de capítulos", value: stats.total_chapters, icon: Layers, color: "text-blue-400 bg-blue-500/10" },
+        { label: "Concluídos", value: stats.done_chapters, icon: CheckCircle2, color: "text-emerald-400 bg-emerald-500/10" },
+        { label: "Em processamento", value: stats.processing_chapters, icon: Loader2, color: "text-amber-400 bg-amber-500/10" },
         {
-          label: "API xarajat",
+          label: "Custo de API",
           value: stats.total_cost_usd > 0 ? `$${stats.total_cost_usd.toFixed(4)}` : "$0",
           icon: DollarSign,
           color: "text-violet-400 bg-violet-500/10",
@@ -48,7 +48,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
         })
       ) : (
         <div className="col-span-full rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-          Statistikalar yuklanmoqda...
+          Carregando estatísticas...
         </div>
       )}
     </div>
