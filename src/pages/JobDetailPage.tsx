@@ -12,20 +12,35 @@ import JobProgressCard from "../components/job/JobProgressCard";
 import JobLogs from "../components/job/JobLogs";
 
 function phaseForProgress(progress: number) {
-  if (progress <= 8) return "Tayyorgarlik...";
-  if (progress <= 25) return "Mask generation...";
-  if (progress <= 65) return "OCR — matn tanib olish...";
-  if (progress <= 78) return "Tarjima qilish...";
-  if (progress <= 92) return "Rasmlarni tozalash...";
-  return "Yakunlanmoqda...";
+  if (progress <= 8) return "Preparando...";
+  if (progress <= 25) return "Gerando máscaras...";
+  if (progress <= 65) return "OCR — reconhecendo texto...";
+  if (progress <= 78) return "Traduzindo...";
+  if (progress <= 92) return "Limpando imagens...";
+  return "Finalizando...";
 }
+
+const statusVariant: Record<string, "success" | "info" | "warning" | "danger"> = {
+  done: "success",
+  running: "warning",
+  failed: "danger",
+  cancelled: "info",
+};
+
+const statusLabel: Record<string, string> = {
+  done: "Concluído",
+  running: "Executando",
+  failed: "Erro",
+  cancelled: "Cancelado",
+  idle: "Aguardando",
+};
 
 export default function JobDetailPage() {
   const { jobId } = useParams();
   const navigate = useNavigate();
   const [job, setJob] = useState<JobInfo | null>(null);
   const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState("Kutilmoqda...");
+  const [phase, setPhase] = useState("Aguardando...");
   const [logs, setLogs] = useState<string[]>([]);
   const [status, setStatus] = useState<"running" | "done" | "failed" | "cancelled" | "idle">("idle");
   const [costUsd, setCostUsd] = useState<number | null>(null);
@@ -41,13 +56,13 @@ export default function JobDetailPage() {
         if (data.cost_usd) setCostUsd(parseFloat(data.cost_usd));
         if (data.status === "done") {
           setProgress(100);
-          setPhase("Tayyor!");
+          setPhase("Concluído!");
         } else if (data.status === "cancelled") {
           setProgress(0);
-          setPhase("Bekor qilindi");
+          setPhase("Cancelado");
         } else if (data.status === "failed") {
           setProgress(0);
-          setPhase("Xatolik!");
+          setPhase("Erro!");
         }
       })
       .catch(() => setStatus("failed"));
@@ -64,141 +79,122 @@ export default function JobDetailPage() {
     }
     if (data.type === "done") {
       setProgress(100);
-      setPhase("Tayyor!");
+      setPhase("Concluído!");
       setStatus("done");
       if (data.cost_usd) setCostUsd(data.cost_usd);
       if (data.pages || data.regions || data.chapters) {
         const stats: string[] = [];
-        if (data.pages) stats.push(`${data.pages} sahifa`);
-        if (data.regions) stats.push(`${data.regions} region`);
-        if (data.chapters) stats.push(`${data.chapters} chapter`);
+        if (data.pages) stats.push(`${data.pages} página${data.pages !== 1 ? "s" : ""}`);
+        if (data.regions) stats.push(`${data.regions} região${data.regions !== 1 ? "s" : ""}`);
+        if (data.chapters) stats.push(`${data.chapters} capítulo${data.chapters !== 1 ? "s" : ""}`);
         setMeta(stats.join(", "));
       }
     }
     if (data.type === "cancelled") {
       setStatus("cancelled");
-      setPhase("Bekor qilindi");
+      setPhase("Cancelado");
     }
     if (data.type === "error") {
       setStatus("failed");
-      setPhase("Xatolik!");
-      toast.error(data.message || "Job xatolik bilan tugadi");
+      setPhase("Erro!");
+      if (data.message) setLogs((prev) => [...prev, `ERRO: ${data.message}`]);
     }
   }, []);
 
-  const handleClose = useCallback(() => {
+  useJobWebSocket(status === "running" ? jobId : undefined, handleMessage);
+
+  async function handleRetry() {
     if (!jobId) return;
-    api.getJob(jobId).then((data) => {
-      if (data.status !== "running") {
-        setJob(data);
-        setStatus(data.status);
-      }
-    });
-  }, [jobId]);
-
-  useJobWebSocket(job && job.status === "running" ? job.id : null, handleMessage, handleClose);
-
-  const statusBadge = useMemo(() => {
-    if (status === "running") return <Badge variant="warning">Ishlayapti</Badge>;
-    if (status === "done") return <Badge variant="success">Tayyor</Badge>;
-    if (status === "cancelled") return <Badge variant="info">Bekor qilindi</Badge>;
-    if (status === "failed") return <Badge variant="danger">Xatolik</Badge>;
-    return <Badge variant="outline">Kutilmoqda</Badge>;
-  }, [status]);
+    try {
+      await api.retryJob(jobId);
+      toast.success("Tarefa reiniciada");
+      setProgress(0);
+      setPhase("Aguardando...");
+      setLogs([]);
+      setStatus("running");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
 
   async function handleCancel() {
     if (!jobId) return;
-    if (!confirm("Jobni to'xtatmoqchimisiz?")) return;
-    await api.cancelJob(jobId);
+    try {
+      await api.cancelJob(jobId);
+      toast.info("Tarefa cancelada");
+      setStatus("cancelled");
+      setPhase("Cancelado");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
-  async function handleRestart() {
-    if (!jobId) return;
-    const res = await api.restartJob(jobId);
-    navigate(`/job/${res.job_id}`);
-  }
+  const canRetry = status === "failed" || status === "cancelled";
+  const canCancel = status === "running";
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <Link
-            to="/jobs"
-            className="mb-2 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Joblar
-          </Link>
-          <h1 className="page-title flex items-center gap-3">
-            Job
-            <span className="mono text-lg font-normal text-muted-foreground">{jobId}</span>
-          </h1>
-          {job && (
-            <p className="page-description">
-              {job.manga} / {job.chapter ? `${job.chapter}-bob` : "—"} · {job.language?.toUpperCase()} · {job.backend}
-            </p>
-          )}
+    <div className="animate-fade-in space-y-4">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-semibold">
+                Tarefa{" "}
+                <span className="mono text-sm text-muted-foreground">{jobId}</span>
+              </h1>
+              <Badge variant={statusVariant[status] || "info"}>
+                {statusLabel[status] ?? status}
+              </Badge>
+            </div>
+            {job && (
+              <p className="text-sm text-muted-foreground">
+                {job.manga}
+                {job.chapter ? ` / Cap. ${job.chapter}` : ""}
+                {job.language ? ` · ${job.language.toUpperCase()}` : ""}
+                {job.backend ? ` · ${job.backend}` : ""}
+              </p>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          {status === "running" && (
-            <Button variant="destructive" size="sm" onClick={handleCancel} className="gap-1.5">
+          {costUsd !== null && (
+            <div className="flex items-center gap-1 rounded-md border bg-card px-2.5 py-1.5 text-xs">
+              <DollarSign className="h-3 w-3 text-muted-foreground" />
+              <span className="mono">${costUsd.toFixed(4)}</span>
+            </div>
+          )}
+          {job?.chapter && status === "done" && (
+            <Link to={`/results/${job.manga}/${job.chapter}`}>
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                Ver resultado
+              </Button>
+            </Link>
+          )}
+          {canRetry && (
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleRetry}>
+              <RotateCcw className="h-3.5 w-3.5" />
+              Tentar novamente
+            </Button>
+          )}
+          {canCancel && (
+            <Button size="sm" variant="outline" className="gap-1.5 text-destructive hover:text-destructive" onClick={handleCancel}>
               <Square className="h-3.5 w-3.5" />
-              To'xtatish
+              Cancelar
             </Button>
           )}
         </div>
       </div>
 
-      <JobProgressCard
-        status={status}
-        progress={progress}
-        phase={phase}
-        meta={meta}
-        statusBadge={statusBadge}
-      />
+      {/* Progresso */}
+      <JobProgressCard progress={progress} phase={phase} meta={meta} />
 
+      {/* Logs */}
       <JobLogs logs={logs} />
-
-      {/* Cost */}
-      {typeof costUsd === "number" && (
-        <div className="flex items-center gap-4 rounded-lg border bg-card p-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-            <DollarSign className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">API xarajat</div>
-            <div className="text-xl font-semibold mono">${costUsd.toFixed(6)}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      {(status === "failed" || status === "cancelled") && job && (
-        <div className="flex items-center gap-2">
-          <Link to={`/project/${job.manga}`}>
-            <Button variant="outline">Manga</Button>
-          </Link>
-          <Button onClick={handleRestart} className="gap-1.5">
-            <RotateCcw className="h-4 w-4" />
-            Qayta ishga tushirish
-          </Button>
-        </div>
-      )}
-
-      {status === "done" && job?.chapter && (
-        <div className="flex items-center gap-2">
-          <Link to={`/project/${job.manga}`}>
-            <Button variant="outline">Manga</Button>
-          </Link>
-          <Link to={`/results/${job.manga}/${job.chapter}`}>
-            <Button className="gap-1.5">
-              <Eye className="h-4 w-4" />
-              Natijalarni ko'rish
-            </Button>
-          </Link>
-        </div>
-      )}
     </div>
   );
 }
