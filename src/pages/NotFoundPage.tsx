@@ -6,14 +6,14 @@ export default function NotFoundPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center animate-fade-in">
       <SearchX className="mb-4 h-12 w-12 text-muted-foreground/40" />
-      <h1 className="text-xl font-semibold">Sahifa topilmadi</h1>
+      <h1 className="text-xl font-semibold">Página não encontrada</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Manzil noto'g'ri yoki o'chirilgan bo'lishi mumkin.
+        O endereço está incorreto ou foi removido.
       </p>
       <Link to="/" className="mt-6">
         <Button variant="outline" className="gap-1.5">
           <ArrowLeft className="h-4 w-4" />
-          Dashboard
+          Voltar ao Painel
         </Button>
       </Link>
     </div>
